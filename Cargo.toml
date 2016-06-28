@@ -3,6 +3,14 @@ name = "wsdl-rs"
 version = "0.1.0"
 authors = ["jaxx"]
 
+[[bin]]
+name = "wsdl"
+path = "src/bin/main.rs"
+
+[lib]
+name = "wsdl"
+path = "src/wsdl/lib.rs"
+
 [dependencies]
 hyper = "0.9.9"
 xml-rs = "0.3.4"
