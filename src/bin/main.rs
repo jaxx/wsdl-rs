@@ -3,5 +3,13 @@ extern crate wsdl;
 use wsdl::Wsdl;
 
 fn main() {
-    let wsdl = Wsdl::fetch("http://10.1.210.116/etoimik.asmx?WSDL");
+    let wsdl = match Wsdl::load_from_url("http://www.webservicex.com/globalweather.asmx?WSDL") {
+        Ok(v) => v,
+        Err(e) => panic!("Error: {}", e),
+    };
+
+    // let wsdl = match Wsdl::from_file("/home/jaxx/Downloads/etoimik.asmx") {
+    // Ok(v) => v,
+    // Err(e) => panic!("Error: {}", e),
+    // };
 }

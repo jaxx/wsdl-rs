@@ -14,3 +14,4 @@ path = "src/wsdl/lib.rs"
 [dependencies]
 hyper = "0.9.9"
 xml-rs = "0.3.4"
+encoding = "0.2.32"
