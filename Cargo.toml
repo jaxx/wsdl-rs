@@ -1,0 +1,8 @@
+[package]
+name = "wsdl-rs"
+version = "0.1.0"
+authors = ["jaxx"]
+
+[dependencies]
+hyper = "0.9.9"
+xml-rs = "0.3.4"
