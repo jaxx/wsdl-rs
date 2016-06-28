@@ -9,8 +9,8 @@ pub type Result<T> = result::Result<T, HttpError>;
 
 #[derive(Debug)]
 pub struct Response {
-    status: StatusCode,
-    body: String
+    pub status: StatusCode,
+    pub body: String
 }
 
 pub fn get(url: &str) -> Result<Response> {
