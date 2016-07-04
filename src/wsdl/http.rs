@@ -2,49 +2,27 @@ use std::result;
 use std::io::Read;
 
 use hyper::Client;
-use hyper::status::StatusCode;
-use hyper::header::ContentType;
-use hyper::mime::Mime;
-use hyper::mime::Attr::Charset;
 use hyper::error::Error as HttpError;
 
-use encoding::label::encoding_from_whatwg_label;
-use encoding::types::EncodingRef;
 use encoding::all::UTF_8;
+use encoding::DecoderTrap;
+use encoding::types::decode;
 
 pub type Result<T> = result::Result<T, HttpError>;
 
-pub struct Response {
-    pub status: StatusCode,
-    pub encoding: EncodingRef,
-    pub body: String,
-}
-
-pub fn get(url: &str) -> Result<Response> {
+pub fn get(url: &str) -> Result<String> {
     let client = Client::new();
     let mut response = try!(client.get(url).send());
 
-    let mut body = String::new();
-    try!(response.read_to_string(&mut body));
+    let mut bytes = Vec::new();
+    try!(response.read_to_end(&mut bytes));
 
-    Ok(Response {
-        status: response.status,
-        encoding: response.headers
-            .get::<ContentType>()
-            .and_then(|ct| parse_charset_from_content_type(ct))
-            .and_then(|charset| encoding_from_whatwg_label(&charset))
-            .unwrap_or(UTF_8),
-        body: body,
+    let (decoded_contents, _) = decode(&bytes, DecoderTrap::Replace, UTF_8);
+
+
+
+    Ok(match decoded_contents {
+        Ok(contents) => contents,
+        Err(e) => panic!("Failed to decode response: {}", e)
     })
-}
-
-fn parse_charset_from_content_type(header: &ContentType) -> Option<String> {
-    match **header {
-        Mime(_, _, ref params) => {
-            match params.iter().find(|&&(ref ptype, _)| *ptype == Charset) {
-                Some(&(_, ref charset)) => Some(charset.to_string()),
-                None => None,
-            }
-        }
-    }
 }

@@ -8,8 +8,8 @@ fn main() {
         Err(e) => panic!("Error: {}", e),
     };
 
-    // let wsdl = match Wsdl::from_file("/home/jaxx/Downloads/etoimik.asmx") {
-    // Ok(v) => v,
-    // Err(e) => panic!("Error: {}", e),
-    // };
+    let wsdl = match Wsdl::load_from_file("/home/jaxx/Downloads/etoimik.asmx") {
+        Ok(v) => v,
+        Err(e) => panic!("Error: {}", e),
+    };
 }
