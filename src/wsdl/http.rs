@@ -10,12 +10,13 @@ use hyper::error::Error as HttpError;
 
 use encoding::label::encoding_from_whatwg_label;
 use encoding::types::EncodingRef;
+use encoding::all::UTF_8;
 
 pub type Result<T> = result::Result<T, HttpError>;
 
 pub struct Response {
     pub status: StatusCode,
-    pub encoding: Option<EncodingRef>,
+    pub encoding: EncodingRef,
     pub body: String,
 }
 
@@ -31,7 +32,8 @@ pub fn get(url: &str) -> Result<Response> {
         encoding: response.headers
             .get::<ContentType>()
             .and_then(|ct| parse_charset_from_content_type(ct))
-            .and_then(|charset| encoding_from_whatwg_label(&charset)),
+            .and_then(|charset| encoding_from_whatwg_label(&charset))
+            .unwrap_or(UTF_8),
         body: body,
     })
 }

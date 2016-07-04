@@ -9,6 +9,8 @@ use std::io::Result as IoResult;
 use http::Result as HttpResult;
 use xml::reader::{EventReader, XmlEvent};
 
+use encoding::EncoderTrap;
+
 pub struct Wsdl {
     
 }
@@ -17,15 +19,12 @@ impl Wsdl {
     pub fn load_from_url(url: &str) -> HttpResult<Wsdl> {
         let response = try!(http::get(url));
 
-        //println!("{:?}", response.body);
-        //let bytes = response.body.as_bytes();
-        let bytes = if response.body.starts_with("\u{feff}") {
-            response.body[3..].as_bytes()
-        } else {
-            response.body[..].as_bytes()
+        let encoded_body = match response.encoding.encode(&response.body, EncoderTrap::Replace) {
+            Ok(body) => body,
+            Err(e) => panic!("Can't encode response body: {}", e)
         };
 
-        let parser = EventReader::new(bytes);
+        let parser = EventReader::new(&encoded_body[..]);
 
         for element in parser {
             match element {
