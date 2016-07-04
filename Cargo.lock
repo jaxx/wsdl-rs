@@ -4,7 +4,6 @@ version = "0.1.0"
 dependencies = [
  "encoding 0.2.32 (registry+https://github.com/rust-lang/crates.io-index)",
  "hyper 0.9.9 (registry+https://github.com/rust-lang/crates.io-index)",
- "uchardet 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "xml-rs 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -316,24 +315,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "typeable"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-
-[[package]]
-name = "uchardet"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "libc 0.2.12 (registry+https://github.com/rust-lang/crates.io-index)",
- "uchardet-sys 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "uchardet-sys"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "libc 0.2.12 (registry+https://github.com/rust-lang/crates.io-index)",
- "pkg-config 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
-]
 
 [[package]]
 name = "unicase"
