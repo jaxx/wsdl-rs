@@ -13,7 +13,7 @@ pub fn get(url: &str) -> Result<Vec<u8>> {
     client
         .get(url)
         .send()?
-        .read_to_end(&mut bytes);
+        .read_to_end(&mut bytes)?;
 
     Ok(bytes)
 }
