@@ -5,9 +5,8 @@ extern crate encoding;
 mod http;
 mod file;
 
-use std::io::Result as IoResult;
-use std::fmt;
-use http::Result as HttpResult;
+use std::error::Error;
+
 use xml::reader::{EventReader, XmlEvent};
 use encoding::all::UTF_8;
 use encoding::DecoderTrap;
@@ -28,23 +27,15 @@ struct WsdlOperation {
 
 }
 
-#[derive(Debug)]
-pub enum ParseError {
-    Http(hyper::Error),
-    Io(std::io::Error)
-}
-
-pub type ParseResult<T> = Result<T, ParseError>;
-
 impl Wsdl {
-    pub fn load_from_url(url: &str) -> ParseResult<Wsdl> {
-        let contents = http::get(url).map_err(ParseError::Http)?;
+    pub fn load_from_url(url: &str) -> Result<Wsdl, Box<Error>> {
+        let contents = http::get(url)?;
         let decoded_contents = decode_contents(contents);
         parse_wsdl(&decoded_contents[..])
     }
 
-    pub fn load_from_file(location: &str) -> ParseResult<Wsdl> {
-        let contents = file::load(location).map_err(ParseError::Io)?;
+    pub fn load_from_file(location: &str) -> Result<Wsdl, Box<Error>> {
+        let contents = file::load(location)?;
         let decoded_contents = decode_contents(contents);
         parse_wsdl(&decoded_contents[..])
     }
@@ -59,7 +50,7 @@ fn decode_contents(bytes: Vec<u8>) -> Vec<u8> {
     }
 }
 
-fn parse_wsdl(decoded_contents: &[u8]) -> ParseResult<Wsdl> {
+fn parse_wsdl(decoded_contents: &[u8]) -> Result<Wsdl, Box<Error>> {
     let parser = EventReader::new(decoded_contents);
 
     for element in parser {
@@ -85,13 +76,4 @@ fn parse_wsdl(decoded_contents: &[u8]) -> ParseResult<Wsdl> {
     Ok(Wsdl {
 
     })
-}
-
-impl fmt::Display for ParseError {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            &ParseError::Http(ref err) => write!(fmt, "{}", err),
-            &ParseError::Io(ref err) => write!(fmt, "{}", err)
-        }
-    }
 }
