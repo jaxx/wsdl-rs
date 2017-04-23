@@ -52,24 +52,21 @@ fn decode_contents(bytes: Vec<u8>) -> Vec<u8> {
 
 fn parse_wsdl(decoded_contents: &[u8]) -> Result<Wsdl, Box<Error>> {
     let parser = EventReader::new(decoded_contents);
+    let mut iter = parser.into_iter();
 
-    for element in parser {
-        match element {
-            Ok(XmlEvent::StartElement { ref name, .. }) => {
-                if name.local_name == "definitions" {
-                    println!("Found definitions element: {:?}", name);
+    loop {
+        match iter.next() {
+            Some(e) => {
+                let event = e.unwrap();
+
+                match event {
+                    XmlEvent::StartElement { ref name, .. } => {
+                        println!("start element: {}", name.local_name);
+                    },
+                    _ => continue
                 }
             },
-            /*
-            Ok(XmlEvent::EndElement { name }) => {
-                println!("{:?}", name);
-            },
-            Err(e) => {
-                panic!("Error: {}", e);
-            }
-            */
-            _ => {}
-            
+            None => break
         }
     }
 
