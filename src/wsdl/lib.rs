@@ -29,7 +29,7 @@ struct WsdlOperation {
 
 impl Wsdl {
     pub fn load_from_url(url: &str) -> HttpResult<Wsdl> {
-        let contents = try!(http::get(url));
+        let contents = http::get(url)?;
         let decoded_contents = &decode_contents(contents)[..];
 
         let parser = EventReader::new(decoded_contents);
@@ -60,7 +60,7 @@ impl Wsdl {
     }
 
     pub fn load_from_file(location: &str) -> IoResult<Wsdl> {
-        let contents = try!(file::load(location));
+        let contents = file::load(location)?;
         let decoded_contents = &decode_contents(contents)[..];
 
         let parser = EventReader::new(decoded_contents);
