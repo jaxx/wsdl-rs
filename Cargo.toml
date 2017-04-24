@@ -4,15 +4,13 @@ version = "0.1.0"
 authors = ["Jakko Sikkar <jakko.sikkar@gmail.com>",
            "Janno Põldma <janno.poldma@gmail.com>"]
 
-[[bin]]
-name = "wsdl"
-path = "src/bin/main.rs"
-
 [lib]
 name = "wsdl"
-path = "src/wsdl/lib.rs"
 
 [dependencies]
 hyper = "0.10.9"
 xml-rs = "0.4.1"
 encoding = "0.2.33"
+
+[[example]]
+name = "read-wsdl"
