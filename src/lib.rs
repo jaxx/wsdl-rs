@@ -25,8 +25,6 @@ use encoding::all::UTF_8;
 use encoding::DecoderTrap;
 use encoding::types::decode;
 
-use std::convert::From;
-
 const NAMESPACE_WSDL: &'static str = "http://schemas.xmlsoap.org/wsdl/";
 
 #[derive(Debug)]
