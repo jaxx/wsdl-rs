@@ -13,6 +13,11 @@ mod schema;
 
 pub use schema::{
     Wsdl,
+    WsdlBinding,
+    WsdlOperationBinding,
+    WsdlInputBinding,
+    WsdlOutputBinding,
+    WsdlFaultBinding,
     WsdlPort,
     WsdlService
 };

@@ -21,7 +21,38 @@ const NAMESPACE_WSDL: &'static str = "http://schemas.xmlsoap.org/wsdl/";
 
 #[derive(Debug)]
 pub struct Wsdl {
+    pub target_namespace: Option<String>,
     pub services: Vec<WsdlService>
+}
+
+#[derive(Debug)]
+pub struct WsdlInputBinding {
+
+}
+
+#[derive(Debug)]
+pub struct WsdlOutputBinding {
+
+}
+
+#[derive(Debug)]
+pub struct WsdlFaultBinding {
+
+}
+
+#[derive(Debug)]
+pub struct WsdlOperationBinding {
+    pub name: String,
+    pub input: Option<WsdlInputBinding>,
+    pub output: Option<WsdlOutputBinding>,
+    pub fault: Option<WsdlFaultBinding>
+}
+
+#[derive(Debug)]
+pub struct WsdlBinding {
+    pub name: String,
+    pub port_type: OwnedName,
+    pub operations: Vec<WsdlOperationBinding>
 }
 
 #[derive(Debug)]
@@ -51,6 +82,44 @@ impl Wsdl {
         let contents = file::load(location)?;
         let decoded_contents = decode_contents(&contents)?;
         parse_wsdl(&decoded_contents[..])
+    }
+
+    fn read(attributes: &[OwnedAttribute], mut iter: &mut Events<&[u8]>) -> Result<Wsdl, Error> {
+        let mut target_namespace: Option<String> = None;
+
+        for attr in attributes {
+            if attr.name.namespace == None && attr.name.local_name == "targetNamespace" {
+                target_namespace = Some(attr.value.clone());
+            }
+        }
+
+        let mut depth = 0;
+
+        let ns = Some(String::from(NAMESPACE_WSDL));
+        let mut services: Vec<WsdlService> = vec![];
+
+        while let Some(v) = iter.next() {
+            match v? {
+                XmlEvent::StartElement { ref name, ref attributes, .. } if depth == 0 && name.namespace == ns && name.local_name == "service" => {
+                    services.push(WsdlService::read(attributes, &mut iter)?);
+                },
+                XmlEvent::StartElement { .. } => {
+                    depth += 1;
+                },
+                XmlEvent::EndElement { .. } => {
+                    depth -= 1;
+                    if depth < 0 {
+                        break;
+                    }
+                },
+                _ => {}
+            }
+        }
+
+        Ok(Wsdl {
+            services,
+            target_namespace
+        })
     }
 }
 
@@ -128,41 +197,12 @@ fn parse_wsdl(decoded_contents: &[u8]) -> Result<Wsdl, Error> {
         match v? {
             XmlEvent::StartDocument { .. } => continue,
             XmlEvent::EndDocument => break,
-            XmlEvent::StartElement { ref name, .. } if name.namespace == wsdl_ns && name.local_name == "definitions" => {
-                return parse_definitions(&mut iter);
+            XmlEvent::StartElement { ref name, ref attributes, .. } if name.namespace == wsdl_ns && name.local_name == "definitions" => {
+                return Wsdl::read(attributes, &mut iter);
             },
             e => println!("Unexpected element in WSDL document: {:?}", e)
         }
     }
 
     Err(Error::WsdlError(String::from("Required `definitions` element is missing from WSDL document.")))
-}
-
-fn parse_definitions(mut iter: &mut Events<&[u8]>) -> Result<Wsdl, Error> {
-    let mut depth = 0;
-
-    let ns = Some(String::from(NAMESPACE_WSDL));
-    let mut services: Vec<WsdlService> = vec![];
-
-    while let Some(v) = iter.next() {
-        match v? {
-            XmlEvent::StartElement { ref name, ref attributes, .. } if depth == 0 && name.namespace == ns && name.local_name == "service" => {
-                services.push(WsdlService::read(attributes, &mut iter)?);
-            },
-            XmlEvent::StartElement { .. } => {
-                depth += 1;
-            },
-            XmlEvent::EndElement { .. } => {
-                depth -= 1;
-                if depth < 0 {
-                    break;
-                }
-            },
-            _ => {}
-        }
-    }
-
-    Ok(Wsdl {
-        services
-    })
 }
