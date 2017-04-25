@@ -30,6 +30,15 @@ struct WsdlOperation {
 
 }
 
+struct WsdlPort {
+
+}
+
+struct WsdlService {
+    name: String,
+    ports: Vec<WsdlPort>
+}
+
 impl Wsdl {
     pub fn load_from_url(url: &str) -> Result<Wsdl, Box<Error>> {
         let contents = http::get(url)?;
@@ -60,24 +69,16 @@ fn parse_wsdl(decoded_contents: &[u8]) -> Result<Wsdl, Box<Error>> {
     let wsdl_ns = Some(NAMESPACE_WSDL.to_string());
 
     loop {
-        match iter.next() {
-            Some(Ok(XmlEvent::EndDocument)) | None => break,
-            Some(Ok(XmlEvent::StartElement { ref name, .. }))
-                if name.namespace == wsdl_ns && name.local_name == "definitions" => {
-                    println!("Yay! definitions found!");
-
+        if let Some(v) = iter.next() {
+            match v? {
+                XmlEvent::EndDocument => break,
+                XmlEvent::StartElement { ref name, .. } if name.namespace == wsdl_ns && name.local_name == "definitions" => {
                     parse_definitions(&mut iter);
-            },
-            Some(e) => {
-                let event = e.unwrap();
-
-                match event {
-                    XmlEvent::StartElement { ref name, .. } => {
-                        println!("start element: {}", name.local_name);
-                    },
-                    _ => continue
-                }
+                },
+                e => println!("Unexpected element in WSDL document: {:?}", e)
             }
+        } else {
+            break;
         }
     }
 
@@ -86,6 +87,23 @@ fn parse_wsdl(decoded_contents: &[u8]) -> Result<Wsdl, Box<Error>> {
     })
 }
 
-fn parse_definitions(iter: &mut Events<&[u8]>) {
-    let next = iter.next();
+fn parse_definitions(iter: &mut Events<&[u8]>) -> Result<(), Box<Error>> {
+    let mut depth = 0;
+    loop {
+        if let Some(v) = iter.next() {
+            match v? {
+                XmlEvent::StartElement { ref name, .. } => {
+                    depth += 1;
+                    println!("[def] start element: {}", name.local_name);
+                },
+                XmlEvent::EndElement { .. } => {
+                    depth -= 1;
+                    if depth < 0 {
+                        return Ok(());
+                    }
+                },
+                event => println!("[def] event: {:?}", event)
+            }
+        }
+    }
 }
