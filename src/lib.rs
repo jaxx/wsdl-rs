@@ -72,7 +72,7 @@ fn parse_wsdl(decoded_contents: &[u8]) -> Result<Wsdl, Box<Error>> {
         match v? {
             XmlEvent::EndDocument => break,
             XmlEvent::StartElement { ref name, .. } if name.namespace == wsdl_ns && name.local_name == "definitions" => {
-                parse_definitions(&mut iter);
+                parse_definitions(&mut iter)?;
             },
             e => println!("Unexpected element in WSDL document: {:?}", e)
         }
@@ -95,7 +95,7 @@ fn parse_definitions(iter: &mut Events<&[u8]>) -> Result<(), Box<Error>> {
             XmlEvent::EndElement { .. } => {
                 depth -= 1;
                 if depth < 0 {
-                    return Ok(());
+                    break;
                 }
             },
             event => println!("[def] event: {:?}", event)
