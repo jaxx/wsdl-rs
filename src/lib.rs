@@ -54,8 +54,15 @@ fn parse_wsdl(decoded_contents: &[u8]) -> Result<Wsdl, Box<Error>> {
     let parser = EventReader::new(decoded_contents);
     let mut iter = parser.into_iter();
 
+    let wsdl_ns = Some(NAMESPACE_WSDL.to_string());
+
     loop {
         match iter.next() {
+            Some(Ok(XmlEvent::EndDocument)) => break,
+            Some(Ok(XmlEvent::StartElement { ref name, .. }))
+                if name.namespace == wsdl_ns && name.local_name == "definitions" => {
+                    println!("Yay! definitions found!");
+            },
             Some(e) => {
                 let event = e.unwrap();
 
@@ -73,4 +80,8 @@ fn parse_wsdl(decoded_contents: &[u8]) -> Result<Wsdl, Box<Error>> {
     Ok(Wsdl {
 
     })
+}
+
+fn parse_definitions() {
+
 }
