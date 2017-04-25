@@ -30,6 +30,7 @@ mod tests {
     #[test]
     fn get_url_fail_test() {
         let result = get("http://www.sde.dd/");
+
         assert!(result.is_err());
     }
 }

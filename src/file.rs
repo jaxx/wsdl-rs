@@ -13,10 +13,12 @@ pub fn load(location: &str) -> Result<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
 
     #[test]
     fn load_file_test() {
-        let result = load("examples/files/etoimik.wsdl");
+        let file = get_wsdl_file("etoimik.wsdl").unwrap();
+        let result = load(&file);
 
         assert!(result.is_ok());
         let file_contents = result.unwrap();
@@ -25,7 +27,19 @@ mod tests {
 
     #[test]
     fn load_file_fail_test() {
-        let result = load("examples/files/etoimik2.wsdl");
+        let file = get_wsdl_file("etoimik2.wsdl").unwrap();
+        let result = load(&file);
+
         assert!(result.is_err());
+    }
+
+    fn get_wsdl_file(name: &str) -> Option<String> {
+        let mut start = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+
+        start.push("examples");
+        start.push("files");
+        start.push(name);
+
+        start.to_str().map(String::from)
     }
 }
