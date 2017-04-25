@@ -12,6 +12,8 @@ mod error;
 use error::Error;
 
 use xml::attribute::OwnedAttribute;
+use xml::name::OwnedName;
+use xml::namespace::Namespace;
 
 use xml::reader::{
     EventReader,
@@ -23,6 +25,8 @@ use encoding::all::UTF_8;
 use encoding::DecoderTrap;
 use encoding::types::decode;
 
+use std::convert::From;
+
 const NAMESPACE_WSDL: &'static str = "http://schemas.xmlsoap.org/wsdl/";
 
 #[derive(Debug)]
@@ -32,13 +36,18 @@ pub struct Wsdl {
 
 #[derive(Debug)]
 struct WsdlPort {
-
+    name: String,
+    binding: OwnedName
 }
 
 #[derive(Debug)]
 struct WsdlService {
     name: String,
     ports: Vec<WsdlPort>
+}
+
+trait Documented {
+
 }
 
 impl Wsdl {
@@ -56,18 +65,62 @@ impl Wsdl {
 }
 
 impl WsdlService {
-    fn read(attributes: &[OwnedAttribute]) -> Result<WsdlService, Error> {
+    fn read(attributes: &[OwnedAttribute], iter: &mut Events<&[u8]>) -> Result<WsdlService, Error> {
         let mut name: Option<String> = None;
         for attr in attributes {
             if attr.name.namespace == None && attr.name.local_name == "name" {
                 name = Some(attr.value.clone());
             }
         }
-        Ok(WsdlService {
-            name: name.unwrap(),
-            ports: vec![]
+        let mut ports = vec![];
+        for event in iter {
+            match event? {
+                XmlEvent::StartElement { ref name, ref attributes, ref namespace } if name.local_name == "port" => {
+                    ports.push(WsdlPort::read(attributes, namespace)?);
+                }
+                XmlEvent::EndElement { .. } => {
+                    return Ok(WsdlService {
+                        name: name.ok_or(Error::WsdlError("Attribute `name` is mandatory for `wsdl:service` element."))?,
+                        ports: ports
+                    });
+                },
+                _ => continue
+            }
+        }
+        Err(Error::WsdlError("Invalid `wsdl:service` element."))
+    }
+}
+
+impl WsdlPort {
+    fn read(attributes: &[OwnedAttribute], namespace: &Namespace) -> Result<WsdlPort, Error> {
+        let mut name: Option<String> = None;
+        let mut binding: Option<String> = None;
+        for attr in attributes {
+            if attr.name.namespace.is_none() {
+                if attr.name.local_name == "name" {
+                    name = Some(attr.value.clone());
+                } else if attr.name.local_name == "binding" {
+                    binding = Some(attr.value.clone());
+                }
+            }
+        }
+        let mut binding: OwnedName = binding.ok_or(Error::WsdlError("Attribute `binding` is mandatory for `wsdl:port` element."))?.parse().unwrap();
+        if let Some(ref pfx) = binding.prefix {
+            binding.namespace = namespace.get(pfx).map(|x| x.to_string());
+        }
+        Ok(WsdlPort {
+            name: name.ok_or(Error::WsdlError("Attribute `name` is mandatory for `wsdl:port` element."))?,
+            binding: binding
         })
     }
+}
+
+impl Documented for WsdlService {
+
+}
+
+impl Documented for WsdlPort {
+
 }
 
 fn decode_contents(bytes: &[u8]) -> Vec<u8> {
@@ -99,16 +152,16 @@ fn parse_wsdl(decoded_contents: &[u8]) -> Result<Wsdl, Error> {
     Err(Error::WsdlError("Required `definitions` element is missing from WSDL document."))
 }
 
-fn parse_definitions(iter: &mut Events<&[u8]>) -> Result<Wsdl, Error> {
+fn parse_definitions(mut iter: &mut Events<&[u8]>) -> Result<Wsdl, Error> {
     let mut depth = 0;
 
     let ns = Some(String::from(NAMESPACE_WSDL));
     let mut services: Vec<WsdlService> = vec![];
 
-    for v in iter {
+    while let Some(v) = iter.next() {
         match v? {
             XmlEvent::StartElement { ref name, ref attributes, .. } if depth == 0 && name.namespace == ns && name.local_name == "service" => {
-                services.push(WsdlService::read(attributes)?);
+                services.push(WsdlService::read(attributes, &mut iter)?);
             },
             XmlEvent::StartElement { .. } => {
                 depth += 1;
