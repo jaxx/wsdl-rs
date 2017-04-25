@@ -80,7 +80,7 @@ impl WsdlService {
                 XmlEvent::EndElement { .. } => {
                     return Ok(WsdlService {
                         name: name.ok_or_else(|| Error::WsdlError(String::from("Attribute `name` is mandatory for `wsdl:service` element.")))?,
-                        ports: ports
+                        ports
                     });
                 },
                 _ => continue
@@ -109,7 +109,7 @@ impl WsdlPort {
         }
         Ok(WsdlPort {
             name: name.ok_or_else(|| Error::WsdlError(String::from("Attribute `name` is mandatory for `wsdl:port` element.")))?,
-            binding: binding
+            binding
         })
     }
 }
@@ -172,6 +172,6 @@ fn parse_definitions(mut iter: &mut Events<&[u8]>) -> Result<Wsdl, Error> {
     }
 
     Ok(Wsdl {
-        services: services
+        services
     })
 }
