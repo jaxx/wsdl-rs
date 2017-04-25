@@ -19,7 +19,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn get_test() {
+    fn get_url_test() {
         let result = get("http://httpbin.org/get");
 
         assert!(result.is_ok());
@@ -28,8 +28,8 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
-    fn get_fail_test() {
-        get("http://www.sde.dd/").unwrap();
+    fn get_url_fail_test() {
+        let result = get("http://www.sde.dd/");
+        assert!(result.is_err());
     }
 }
