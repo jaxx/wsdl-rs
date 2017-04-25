@@ -1,5 +1,6 @@
 use std::io::Error as IoError;
 use std::fmt::{Display, Formatter, Result};
+use std::borrow::Cow;
 
 use hyper::Error as HyperError;
 use xml::reader::Error as XmlError;
@@ -9,7 +10,7 @@ pub enum Error {
     IoError(IoError),
     HttpError(HyperError),
     XmlError(XmlError),
-    WsdlError(&'static str)
+    WsdlError(String)
 }
 
 impl Display for Error {
@@ -18,8 +19,14 @@ impl Display for Error {
             Error::IoError(ref e) => write!(f, "IO error: {}", e),
             Error::HttpError(ref e) => write!(f, "HTTP error: {}", e),
             Error::XmlError(ref e) => write!(f, "XML error: {}", e),
-            Error::WsdlError(s) => write!(f, "WSDL error: {}", s)
+            Error::WsdlError(ref e) => write!(f, "WSDL error: {}", e)
         }
+    }
+}
+
+impl<'a> From<Cow<'a, str>> for Error {
+    fn from(error: Cow<'a, str>) -> Error {
+        Error::WsdlError(error.into_owned())
     }
 }
 
