@@ -1,6 +1,13 @@
 extern crate wsdl;
 
-use wsdl::Wsdl;
+use wsdl::{
+    NamedItem,
+    Wsdl
+};
+
+fn print_name(named_item: &NamedItem) {
+    println!("Name is: {}", named_item.get_name());
+}
 
 fn main() {
     let wsdl = match Wsdl::load_from_url("http://www.webservicex.com/globalweather.asmx?WSDL") {
@@ -16,4 +23,6 @@ fn main() {
     };
 
     println!("WSDL: {:?}", wsdl);
+
+    print_name(&wsdl.services[0]);
 }

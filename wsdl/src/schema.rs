@@ -71,6 +71,25 @@ trait Documented {
 
 }
 
+pub trait NamedItem {
+    fn get_name(&self) -> &String;
+}
+
+macro_rules! named_item {
+    ($type_:ty) => {
+        impl NamedItem for $type_ {
+            fn get_name(&self) -> &String {
+                &self.name
+            }
+        }
+    }
+}
+
+named_item!(WsdlService);
+named_item!(WsdlPort);
+named_item!(WsdlBinding);
+named_item!(WsdlOperationBinding);
+
 impl Wsdl {
     pub fn load_from_url(url: &str) -> Result<Wsdl, Error> {
         let contents = http::get(url)?;
