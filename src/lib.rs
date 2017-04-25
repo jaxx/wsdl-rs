@@ -69,13 +69,16 @@ fn parse_wsdl(decoded_contents: &[u8]) -> Result<Wsdl, Box<Error>> {
     let wsdl_ns = Some(NAMESPACE_WSDL.to_string());
 
     loop {
-        match iter.next() {
-            Some(Ok(XmlEvent::EndDocument)) | None => break,
-            Some(Ok(XmlEvent::StartElement { ref name, .. }))
-                if name.namespace == wsdl_ns && name.local_name == "definitions" => {
+        if let Some(v) = iter.next() {
+            match v? {
+                XmlEvent::EndDocument => break,
+                XmlEvent::StartElement { ref name, .. } if name.namespace == wsdl_ns && name.local_name == "definitions" => {
                     parse_definitions(&mut iter);
-            },
-            x => println!("[???] {:?}", x)
+                },
+                e => println!("Unexpected element in WSDL document: {:?}", e)
+            }
+        } else {
+            break;
         }
     }
 
@@ -84,21 +87,23 @@ fn parse_wsdl(decoded_contents: &[u8]) -> Result<Wsdl, Box<Error>> {
     })
 }
 
-fn parse_definitions(iter: &mut Events<&[u8]>) {
+fn parse_definitions(iter: &mut Events<&[u8]>) -> Result<(), Box<Error>> {
     let mut depth = 0;
     loop {
-        match iter.next() {
-            Some(Ok(XmlEvent::StartElement { ref name, .. })) => {
-                depth += 1;
-                println!("[def] start element: {}", name.local_name);
-            },
-            Some(Ok(XmlEvent::EndElement { .. })) => {
-                depth -= 1;
-                if depth < 0 {
-                    return;
-                }
-            },
-            _ => continue
+        if let Some(v) = iter.next() {
+            match v? {
+                XmlEvent::StartElement { ref name, .. } => {
+                    depth += 1;
+                    println!("[def] start element: {}", name.local_name);
+                },
+                XmlEvent::EndElement { .. } => {
+                    depth -= 1;
+                    if depth < 0 {
+                        return Ok(());
+                    }
+                },
+                event => println!("[def] event: {:?}", event)
+            }
         }
     }
 }
