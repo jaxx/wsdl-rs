@@ -30,6 +30,15 @@ struct WsdlOperation {
 
 }
 
+struct WsdlPort {
+
+}
+
+struct WsdlService {
+    name: String,
+    ports: Vec<WsdlPort>
+}
+
 impl Wsdl {
     pub fn load_from_url(url: &str) -> Result<Wsdl, Box<Error>> {
         let contents = http::get(url)?;
@@ -64,20 +73,9 @@ fn parse_wsdl(decoded_contents: &[u8]) -> Result<Wsdl, Box<Error>> {
             Some(Ok(XmlEvent::EndDocument)) | None => break,
             Some(Ok(XmlEvent::StartElement { ref name, .. }))
                 if name.namespace == wsdl_ns && name.local_name == "definitions" => {
-                    println!("Yay! definitions found!");
-
                     parse_definitions(&mut iter);
             },
-            Some(e) => {
-                let event = e.unwrap();
-
-                match event {
-                    XmlEvent::StartElement { ref name, .. } => {
-                        println!("start element: {}", name.local_name);
-                    },
-                    _ => continue
-                }
-            }
+            x => println!("[???] {:?}", x)
         }
     }
 
@@ -87,5 +85,20 @@ fn parse_wsdl(decoded_contents: &[u8]) -> Result<Wsdl, Box<Error>> {
 }
 
 fn parse_definitions(iter: &mut Events<&[u8]>) {
-    let next = iter.next();
+    let mut depth = 0;
+    loop {
+        match iter.next() {
+            Some(Ok(XmlEvent::StartElement { ref name, .. })) => {
+                depth += 1;
+                println!("[def] start element: {}", name.local_name);
+            },
+            Some(Ok(XmlEvent::EndElement { .. })) => {
+                depth -= 1;
+                if depth < 0 {
+                    return;
+                }
+            },
+            _ => continue
+        }
+    }
 }
