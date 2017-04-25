@@ -7,7 +7,7 @@ mod file;
 
 use std::error::Error;
 
-use xml::reader::{EventReader, XmlEvent};
+use xml::reader::{EventReader, Events, XmlEvent};
 use encoding::all::UTF_8;
 use encoding::DecoderTrap;
 use encoding::types::decode;
@@ -62,6 +62,8 @@ fn parse_wsdl(decoded_contents: &[u8]) -> Result<Wsdl, Box<Error>> {
             Some(Ok(XmlEvent::StartElement { ref name, .. }))
                 if name.namespace == wsdl_ns && name.local_name == "definitions" => {
                     println!("Yay! definitions found!");
+
+                    parse_definitions(&mut iter);
             },
             Some(e) => {
                 let event = e.unwrap();
@@ -82,6 +84,6 @@ fn parse_wsdl(decoded_contents: &[u8]) -> Result<Wsdl, Box<Error>> {
     })
 }
 
-fn parse_definitions() {
-
+fn parse_definitions(iter: &mut Events<&[u8]>) {
+    let next = iter.next();
 }
