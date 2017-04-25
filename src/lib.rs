@@ -44,13 +44,13 @@ struct WsdlService {
 impl Wsdl {
     pub fn load_from_url(url: &str) -> Result<Wsdl, Error> {
         let contents = http::get(url)?;
-        let decoded_contents = decode_contents(&contents);
+        let decoded_contents = decode_contents(&contents)?;
         parse_wsdl(&decoded_contents[..])
     }
 
     pub fn load_from_file(location: &str) -> Result<Wsdl, Error> {
         let contents = file::load(location)?;
-        let decoded_contents = decode_contents(&contents);
+        let decoded_contents = decode_contents(&contents)?;
         parse_wsdl(&decoded_contents[..])
     }
 }
@@ -70,13 +70,9 @@ impl WsdlService {
     }
 }
 
-fn decode_contents(bytes: &[u8]) -> Vec<u8> {
+fn decode_contents(bytes: &[u8]) -> Result<Vec<u8>, Error> {
     let (decoded_contents, _) = decode(bytes, DecoderTrap::Replace, UTF_8);
-
-    match decoded_contents {
-        Ok(contents) => contents.as_bytes().to_vec(),
-        Err(e) => panic!("Failed to decode contents: {}", e)
-    }
+    Ok(decoded_contents?.as_bytes().to_vec())
 }
 
 fn parse_wsdl(decoded_contents: &[u8]) -> Result<Wsdl, Error> {
@@ -96,7 +92,7 @@ fn parse_wsdl(decoded_contents: &[u8]) -> Result<Wsdl, Error> {
         }
     }
 
-    Err(Error::WsdlError("Required `definitions` element is missing from WSDL document."))
+    Err(Error::WsdlError(String::from("Required `definitions` element is missing from WSDL document.")))
 }
 
 fn parse_definitions(iter: &mut Events<&[u8]>) -> Result<Wsdl, Error> {
