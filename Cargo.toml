@@ -11,6 +11,10 @@ name = "wsdl"
 hyper = "0.10.9"
 xml-rs = "0.4.1"
 encoding = "0.2.33"
+clippy = {version = "*", optional = true}
 
 [[example]]
 name = "read-wsdl"
+
+[features]
+default = []
