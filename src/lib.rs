@@ -33,19 +33,19 @@ struct WsdlOperation {
 impl Wsdl {
     pub fn load_from_url(url: &str) -> Result<Wsdl, Box<Error>> {
         let contents = http::get(url)?;
-        let decoded_contents = decode_contents(contents);
+        let decoded_contents = decode_contents(&contents);
         parse_wsdl(&decoded_contents[..])
     }
 
     pub fn load_from_file(location: &str) -> Result<Wsdl, Box<Error>> {
         let contents = file::load(location)?;
-        let decoded_contents = decode_contents(contents);
+        let decoded_contents = decode_contents(&contents);
         parse_wsdl(&decoded_contents[..])
     }
 }
 
-fn decode_contents(bytes: Vec<u8>) -> Vec<u8> {
-    let (decoded_contents, _) = decode(&bytes, DecoderTrap::Replace, UTF_8);
+fn decode_contents(bytes: &[u8]) -> Vec<u8> {
+    let (decoded_contents, _) = decode(bytes, DecoderTrap::Replace, UTF_8);
 
     match decoded_contents {
         Ok(contents) => contents.as_bytes().to_vec(),
@@ -61,7 +61,7 @@ fn parse_wsdl(decoded_contents: &[u8]) -> Result<Wsdl, Box<Error>> {
 
     loop {
         match iter.next() {
-            Some(Ok(XmlEvent::EndDocument)) => break,
+            Some(Ok(XmlEvent::EndDocument)) | None => break,
             Some(Ok(XmlEvent::StartElement { ref name, .. }))
                 if name.namespace == wsdl_ns && name.local_name == "definitions" => {
                     println!("Yay! definitions found!");
@@ -77,8 +77,7 @@ fn parse_wsdl(decoded_contents: &[u8]) -> Result<Wsdl, Box<Error>> {
                     },
                     _ => continue
                 }
-            },
-            None => break
+            }
         }
     }
 

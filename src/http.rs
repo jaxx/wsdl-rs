@@ -1,4 +1,3 @@
-use std::result;
 use std::io::Read;
 
 use hyper::Client;
