@@ -68,17 +68,13 @@ fn parse_wsdl(decoded_contents: &[u8]) -> Result<Wsdl, Box<Error>> {
 
     let wsdl_ns = Some(NAMESPACE_WSDL.to_string());
 
-    loop {
-        if let Some(v) = iter.next() {
-            match v? {
-                XmlEvent::EndDocument => break,
-                XmlEvent::StartElement { ref name, .. } if name.namespace == wsdl_ns && name.local_name == "definitions" => {
-                    parse_definitions(&mut iter);
-                },
-                e => println!("Unexpected element in WSDL document: {:?}", e)
-            }
-        } else {
-            break;
+    while let Some(v) = iter.next() {
+        match v? {
+            XmlEvent::EndDocument => break,
+            XmlEvent::StartElement { ref name, .. } if name.namespace == wsdl_ns && name.local_name == "definitions" => {
+                parse_definitions(&mut iter);
+            },
+            e => println!("Unexpected element in WSDL document: {:?}", e)
         }
     }
 
@@ -89,21 +85,22 @@ fn parse_wsdl(decoded_contents: &[u8]) -> Result<Wsdl, Box<Error>> {
 
 fn parse_definitions(iter: &mut Events<&[u8]>) -> Result<(), Box<Error>> {
     let mut depth = 0;
-    loop {
-        if let Some(v) = iter.next() {
-            match v? {
-                XmlEvent::StartElement { ref name, .. } => {
-                    depth += 1;
-                    println!("[def] start element: {}", name.local_name);
-                },
-                XmlEvent::EndElement { .. } => {
-                    depth -= 1;
-                    if depth < 0 {
-                        return Ok(());
-                    }
-                },
-                event => println!("[def] event: {:?}", event)
-            }
+
+    while let Some(v) = iter.next() {
+        match v? {
+            XmlEvent::StartElement { ref name, .. } => {
+                depth += 1;
+                println!("[def] start element: {}", name.local_name);
+            },
+            XmlEvent::EndElement { .. } => {
+                depth -= 1;
+                if depth < 0 {
+                    return Ok(());
+                }
+            },
+            event => println!("[def] event: {:?}", event)
         }
     }
+
+    Ok(())
 }
