@@ -1,20 +1,8 @@
-[package]
-name = "wsdl-rs"
-version = "0.1.0"
-authors = ["Jakko Sikkar <jakko.sikkar@gmail.com>",
-           "Janno Põldma <janno.poldma@gmail.com>"]
-
-[lib]
-name = "wsdl"
-
-[dependencies]
-hyper = "0.10.9"
-xml-rs = "0.4.1"
-encoding = "0.2.33"
-clippy = {version = "*", optional = true}
-
-[[example]]
-name = "read-wsdl"
-
-[features]
-default = []
+[workspace]
+members = [
+    "soap",
+    "wsdl",
+    "xroad",
+    "xroad-gen",
+    "xsd"
+]

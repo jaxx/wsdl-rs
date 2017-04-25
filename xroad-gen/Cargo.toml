@@ -1,0 +1,17 @@
+[package]
+name = "xroad-gen-rs"
+version = "0.1.0"
+authors = ["Jakko Sikkar <jakko.sikkar@gmail.com>",
+           "Janno Põldma <janno.poldma@gmail.com>"]
+
+[[bin]]
+name = "xroad-gen"
+
+[dependencies]
+clippy = {version = "*", optional = true}
+
+[dependencies.xroad-rs]
+path = "../xroad"
+
+[features]
+default = []

@@ -4,6 +4,7 @@
 extern crate hyper;
 extern crate xml;
 extern crate encoding;
+extern crate xsd;
 
 mod http;
 mod file;

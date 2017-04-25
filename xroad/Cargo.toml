@@ -1,0 +1,17 @@
+[package]
+name = "xroad-rs"
+version = "0.1.0"
+authors = ["Jakko Sikkar <jakko.sikkar@gmail.com>",
+           "Janno Põldma <janno.poldma@gmail.com>"]
+
+[lib]
+name = "xroad"
+
+[dependencies]
+clippy = {version = "*", optional = true}
+
+[dependencies.soap-rs]
+path = "../soap"
+
+[features]
+default = []

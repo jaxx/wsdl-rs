@@ -1,0 +1,17 @@
+[package]
+name = "soap-rs"
+version = "0.1.0"
+authors = ["Jakko Sikkar <jakko.sikkar@gmail.com>",
+           "Janno Põldma <janno.poldma@gmail.com>"]
+
+[lib]
+name = "soap"
+
+[dependencies]
+clippy = {version = "*", optional = true}
+
+[dependencies.wsdl-rs]
+path = "../wsdl"
+
+[features]
+default = []

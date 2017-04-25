@@ -1,0 +1,14 @@
+[package]
+name = "xsd-rs"
+version = "0.1.0"
+authors = ["Jakko Sikkar <jakko.sikkar@gmail.com>",
+           "Janno Põldma <janno.poldma@gmail.com>"]
+
+[lib]
+name = "xsd"
+
+[dependencies]
+clippy = {version = "*", optional = true}
+
+[features]
+default = []
