@@ -11,30 +11,31 @@ mod error;
 
 use error::Error;
 
-use xml::reader::{EventReader, Events, XmlEvent};
+use xml::attribute::OwnedAttribute;
+
+use xml::reader::{
+    EventReader,
+    Events,
+    XmlEvent
+};
+
 use encoding::all::UTF_8;
 use encoding::DecoderTrap;
 use encoding::types::decode;
 
 const NAMESPACE_WSDL: &'static str = "http://schemas.xmlsoap.org/wsdl/";
 
+#[derive(Debug)]
 pub struct Wsdl {
-    //operations: Vec<WsdlOperation>
-    //types: Vec<WsdlType> 
+    services: Vec<WsdlService>
 }
 
-struct WsdlType {
-    
-}
-
-struct WsdlOperation {
-
-}
-
+#[derive(Debug)]
 struct WsdlPort {
 
 }
 
+#[derive(Debug)]
 struct WsdlService {
     name: String,
     ports: Vec<WsdlPort>
@@ -51,6 +52,21 @@ impl Wsdl {
         let contents = file::load(location)?;
         let decoded_contents = decode_contents(&contents);
         parse_wsdl(&decoded_contents[..])
+    }
+}
+
+impl WsdlService {
+    fn read(attributes: &[OwnedAttribute]) -> Result<WsdlService, Error> {
+        let mut name: Option<String> = None;
+        for attr in attributes {
+            if attr.name.namespace == None && attr.name.local_name == "name" {
+                name = Some(attr.value.clone());
+            }
+        }
+        Ok(WsdlService {
+            name: name.unwrap(),
+            ports: vec![]
+        })
     }
 }
 
@@ -71,27 +87,31 @@ fn parse_wsdl(decoded_contents: &[u8]) -> Result<Wsdl, Error> {
 
     while let Some(v) = iter.next() {
         match v? {
+            XmlEvent::StartDocument { .. } => continue,
             XmlEvent::EndDocument => break,
             XmlEvent::StartElement { ref name, .. } if name.namespace == wsdl_ns && name.local_name == "definitions" => {
-                parse_definitions(&mut iter)?;
+                return parse_definitions(&mut iter);
             },
             e => println!("Unexpected element in WSDL document: {:?}", e)
         }
     }
 
-    Ok(Wsdl {
-
-    })
+    Err(Error::WsdlError("Required `definitions` element is missing from WSDL document."))
 }
 
-fn parse_definitions(iter: &mut Events<&[u8]>) -> Result<(), Error> {
+fn parse_definitions(iter: &mut Events<&[u8]>) -> Result<Wsdl, Error> {
     let mut depth = 0;
 
-    while let Some(v) = iter.next() {
+    let ns = Some(String::from(NAMESPACE_WSDL));
+    let mut services: Vec<WsdlService> = vec![];
+
+    for v in iter {
         match v? {
-            XmlEvent::StartElement { ref name, .. } => {
+            XmlEvent::StartElement { ref name, ref attributes, .. } if depth == 0 && name.namespace == ns && name.local_name == "service" => {
+                services.push(WsdlService::read(attributes)?);
+            },
+            XmlEvent::StartElement { .. } => {
                 depth += 1;
-                println!("[def] start element: {}", name.local_name);
             },
             XmlEvent::EndElement { .. } => {
                 depth -= 1;
@@ -99,9 +119,11 @@ fn parse_definitions(iter: &mut Events<&[u8]>) -> Result<(), Error> {
                     break;
                 }
             },
-            event => println!("[def] event: {:?}", event)
+            _ => {}
         }
     }
 
-    Ok(())
+    Ok(Wsdl {
+        services: services
+    })
 }

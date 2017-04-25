@@ -8,7 +8,8 @@ use xml::reader::Error as XmlError;
 pub enum Error {
     IoError(IoError),
     HttpError(HyperError),
-    XmlError(XmlError)
+    XmlError(XmlError),
+    WsdlError(&'static str)
 }
 
 impl Display for Error {
@@ -16,7 +17,8 @@ impl Display for Error {
         match *self {
             Error::IoError(ref e) => write!(f, "IO error: {}", e),
             Error::HttpError(ref e) => write!(f, "HTTP error: {}", e),
-            Error::XmlError(ref e) => write!(f, "XML error: {}", e)
+            Error::XmlError(ref e) => write!(f, "XML error: {}", e),
+            Error::WsdlError(s) => write!(f, "WSDL error: {}", s)
         }
     }
 }
