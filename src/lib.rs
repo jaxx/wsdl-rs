@@ -7,8 +7,9 @@ extern crate encoding;
 
 mod http;
 mod file;
+mod error;
 
-use std::error::Error;
+use error::Error;
 
 use xml::reader::{EventReader, Events, XmlEvent};
 use encoding::all::UTF_8;
@@ -40,13 +41,13 @@ struct WsdlService {
 }
 
 impl Wsdl {
-    pub fn load_from_url(url: &str) -> Result<Wsdl, Box<Error>> {
+    pub fn load_from_url(url: &str) -> Result<Wsdl, Error> {
         let contents = http::get(url)?;
         let decoded_contents = decode_contents(&contents);
         parse_wsdl(&decoded_contents[..])
     }
 
-    pub fn load_from_file(location: &str) -> Result<Wsdl, Box<Error>> {
+    pub fn load_from_file(location: &str) -> Result<Wsdl, Error> {
         let contents = file::load(location)?;
         let decoded_contents = decode_contents(&contents);
         parse_wsdl(&decoded_contents[..])
@@ -62,7 +63,7 @@ fn decode_contents(bytes: &[u8]) -> Vec<u8> {
     }
 }
 
-fn parse_wsdl(decoded_contents: &[u8]) -> Result<Wsdl, Box<Error>> {
+fn parse_wsdl(decoded_contents: &[u8]) -> Result<Wsdl, Error> {
     let parser = EventReader::new(decoded_contents);
     let mut iter = parser.into_iter();
 
@@ -83,7 +84,7 @@ fn parse_wsdl(decoded_contents: &[u8]) -> Result<Wsdl, Box<Error>> {
     })
 }
 
-fn parse_definitions(iter: &mut Events<&[u8]>) -> Result<(), Box<Error>> {
+fn parse_definitions(iter: &mut Events<&[u8]>) -> Result<(), Error> {
     let mut depth = 0;
 
     while let Some(v) = iter.next() {
