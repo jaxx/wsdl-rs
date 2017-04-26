@@ -128,13 +128,11 @@ impl Wsdl {
     }
 
     fn read(attributes: &[OwnedAttribute], mut iter: &mut Events<&[u8]>) -> Result<Wsdl, Error> {
-        let mut target_namespace: Option<String> = None;
-
-        for attr in attributes {
-            if attr.name.namespace == None && attr.name.local_name == "targetNamespace" {
-                target_namespace = Some(attr.value.clone());
-            }
-        }
+        let target_namespace = attributes
+            .iter()
+            .filter(|a| a.name.namespace.is_none() && a.name.local_name == "targetNamespace")
+            .map(|a| a.value.clone())
+            .nth(0);
 
         let ns = Some(NAMESPACE_WSDL.to_string());
    
@@ -165,17 +163,19 @@ impl Wsdl {
 
 impl WsdlService {
     fn read(attributes: &[OwnedAttribute], iter: &mut Events<&[u8]>) -> Result<WsdlService, Error> {
-        let mut name: Option<String> = None;
-        for attr in attributes {
-            if attr.name.namespace == None && attr.name.local_name == "name" {
-                name = Some(attr.value.clone());
-            }
-        }
+        let name = attributes
+            .iter()
+            .filter(|a| a.name.namespace.is_none() && a.name.local_name == "name")
+            .map(|a| a.value.clone())
+            .nth(0);
+
         let mut ports = vec![];
+
         for event in iter {
             match event? {
-                XmlEvent::StartElement { ref name, ref attributes, ref namespace } if name.local_name == "port" => {
-                    ports.push(WsdlPort::read(attributes, namespace)?);
+                XmlEvent::StartElement { ref name, ref attributes, ref namespace }
+                    if name.local_name == "port" => {
+                        ports.push(WsdlPort::read(attributes, namespace)?);
                 },
                 XmlEvent::EndElement { .. } => {
                     return Ok(WsdlService {
@@ -239,8 +239,9 @@ impl WsdlBinding {
 
         for event in iter {
             match event? {
-                XmlEvent::StartElement { ref name, ref attributes, ref namespace } if name.local_name == "operation" => {
-                    operations.push(WsdlOperationBinding::read()?);
+                XmlEvent::StartElement { ref name, ref attributes, ref namespace }
+                    if name.local_name == "operation" => {
+                        operations.push(WsdlOperationBinding::read()?);
                 },
                 XmlEvent::EndElement { .. } => {
                     return Ok(WsdlBinding {
@@ -283,8 +284,9 @@ fn parse_wsdl(decoded_contents: &[u8]) -> Result<Wsdl, Error> {
         match v? {
             XmlEvent::StartDocument { .. } => continue,
             XmlEvent::EndDocument => break,
-            XmlEvent::StartElement { ref name, ref attributes, .. } if name.namespace == wsdl_ns && name.local_name == "definitions" => {
-                return Wsdl::read(attributes, &mut iter);
+            XmlEvent::StartElement { ref name, ref attributes, .. }
+                if name.namespace == wsdl_ns && name.local_name == "definitions" => {
+                    return Wsdl::read(attributes, &mut iter);
             },
             e => println!("Unexpected element in WSDL document: {:?}", e)
         }
