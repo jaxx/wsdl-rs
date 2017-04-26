@@ -243,7 +243,7 @@ impl WsdlBinding {
         for event in iter {
             match event? {
                 XmlEvent::StartElement { ref name, ref attributes, ref namespace }
-                    if name.local_name == "operation" => {
+                    if name.namespace == wsdl_ns && name.local_name == "operation" => {
                         operations.push(WsdlOperationBinding::read(attributes, namespace)?);
                 },
                 XmlEvent::EndElement { ref name, .. }
