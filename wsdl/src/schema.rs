@@ -24,8 +24,8 @@ pub trait Documented {
 }
 
 macro_rules! documented {
-    ($type_:ty) => {
-        impl Documented for $type_ {
+    ($type:ty) => {
+        impl Documented for $type {
         }
     }
 }
@@ -35,8 +35,8 @@ pub trait NamedItem {
 }
 
 macro_rules! named_item {
-    ($type_:ty) => {
-        impl NamedItem for $type_ {
+    ($type:ty) => {
+        impl NamedItem for $type {
             fn get_name(&self) -> &str {
                 self.name.as_str()
             }
