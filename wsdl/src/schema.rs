@@ -47,7 +47,8 @@ macro_rules! named_item {
 #[derive(Debug)]
 pub struct Wsdl {
     pub target_namespace: Option<String>,
-    pub services: Vec<WsdlService>
+    pub services: Vec<WsdlService>,
+    pub bindings: Vec<WsdlBinding>
 }
 
 documented!(Wsdl);
@@ -135,32 +136,29 @@ impl Wsdl {
             }
         }
 
-        let mut depth = 0;
-
         let ns = Some(String::from(NAMESPACE_WSDL));
+   
         let mut services: Vec<WsdlService> = vec![];
+        let mut bindings: Vec<WsdlBinding> = vec![];
 
         while let Some(v) = iter.next() {
             match v? {
-                XmlEvent::StartElement { ref name, ref attributes, .. } if depth == 0 && name.namespace == ns && name.local_name == "service" => {
-                    services.push(WsdlService::read(attributes, &mut iter)?);
+                XmlEvent::StartElement { ref name, ref attributes, .. }
+                    if name.namespace == ns && name.local_name == "service" => {
+                        services.push(WsdlService::read(attributes, &mut iter)?);
                 },
-                XmlEvent::StartElement { .. } => {
-                    depth += 1;
+                XmlEvent::StartElement { ref name, ref attributes, ref namespace }
+                    if name.namespace == ns && name.local_name == "binding" => {
+                        bindings.push(WsdlBinding::read(attributes, namespace, &mut iter)?)
                 },
-                XmlEvent::EndElement { .. } => {
-                    depth -= 1;
-                    if depth < 0 {
-                        break;
-                    }
-                },
-                _ => {}
+                _ => continue
             }
         }
 
         Ok(Wsdl {
             services,
-            target_namespace
+            target_namespace,
+            bindings
         })
     }
 }
@@ -178,7 +176,7 @@ impl WsdlService {
             match event? {
                 XmlEvent::StartElement { ref name, ref attributes, ref namespace } if name.local_name == "port" => {
                     ports.push(WsdlPort::read(attributes, namespace)?);
-                }
+                },
                 XmlEvent::EndElement { .. } => {
                     return Ok(WsdlService {
                         name: name.ok_or_else(|| Error::WsdlError(String::from("Attribute `name` is mandatory for `wsdl:service` element.")))?,
@@ -212,6 +210,60 @@ impl WsdlPort {
         Ok(WsdlPort {
             name: name.ok_or_else(|| Error::WsdlError(String::from("Attribute `name` is mandatory for `wsdl:port` element.")))?,
             binding
+        })
+    }
+}
+
+impl WsdlBinding {
+    fn read(attributes: &[OwnedAttribute], namespace: &Namespace, iter: &mut Events<&[u8]>) -> Result<WsdlBinding, Error> {
+        let mut name: Option<String> = None;
+        let mut port_type: Option<String> = None;
+
+        for attr in attributes {
+            if attr.name.namespace.is_none() {
+                if attr.name.local_name == "name" {
+                    name = Some(attr.value.clone());
+                } else if attr.name.local_name == "type" {
+                    port_type = Some(attr.value.clone());
+                }
+            }
+        }
+
+        let mut port_type: OwnedName = port_type.ok_or_else(|| Error::WsdlError(String::from("Attribute `type` is mandatory for `wsdl:binding` element.")))?.parse().unwrap();
+
+        if let Some(ref pfx) = port_type.prefix {
+            port_type.namespace = namespace.get(pfx).map(|x| x.to_string());
+        }
+
+        let mut operations: Vec<WsdlOperationBinding> = vec![];
+
+        for event in iter {
+            match event? {
+                XmlEvent::StartElement { ref name, ref attributes, ref namespace } if name.local_name == "operation" => {
+                    operations.push(WsdlOperationBinding::read()?);
+                },
+                XmlEvent::EndElement { .. } => {
+                    return Ok(WsdlBinding {
+                        name: name.ok_or_else(|| Error::WsdlError(String::from("Attribute `name` is mandatory for `wsdl:binding` element.")))?,
+                        port_type,
+                        operations
+                    });
+                },
+                _ => continue
+            }
+        }
+   
+        Err(Error::WsdlError(String::from("Invalid `wsdl:binding` element.")))
+    }
+}
+
+impl WsdlOperationBinding {
+    fn read() -> Result<WsdlOperationBinding, Error> {
+        Ok(WsdlOperationBinding{
+            name: "operationbinding".into(),
+             input: None,
+             output: None,
+             fault: None
         })
     }
 }

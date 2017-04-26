@@ -16,6 +16,7 @@ fn main() {
     };
 
     println!("WSDL: {:?}", wsdl);
+    print_name(&wsdl.services[0]);
 
     let wsdl = match Wsdl::load_from_file("wsdl/examples/files/etoimik.wsdl") {
         Ok(v) => v,
