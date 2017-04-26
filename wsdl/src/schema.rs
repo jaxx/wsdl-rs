@@ -133,7 +133,7 @@ impl Wsdl {
             .find(|a| a.name.namespace.is_none() && a.name.local_name == "targetNamespace")
             .map(|a| a.value.clone());
 
-        let ns = Some(NAMESPACE_WSDL.to_string());
+        let wsdl_ns = Some(NAMESPACE_WSDL.to_string());
    
         let mut services: Vec<WsdlService> = vec![];
         let mut bindings: Vec<WsdlBinding> = vec![];
@@ -141,11 +141,11 @@ impl Wsdl {
         while let Some(v) = iter.next() {
             match v? {
                 XmlEvent::StartElement { ref name, ref attributes, .. }
-                    if name.namespace == ns && name.local_name == "service" => {
+                    if name.namespace == wsdl_ns && name.local_name == "service" => {
                         services.push(WsdlService::read(attributes, &mut iter)?);
                 },
                 XmlEvent::StartElement { ref name, ref attributes, ref namespace }
-                    if name.namespace == ns && name.local_name == "binding" => {
+                    if name.namespace == wsdl_ns && name.local_name == "binding" => {
                         bindings.push(WsdlBinding::read(attributes, namespace, &mut iter)?)
                 },
                 _ => continue
@@ -193,6 +193,7 @@ impl WsdlPort {
     fn read(attributes: &[OwnedAttribute], namespace: &Namespace) -> Result<WsdlPort, Error> {
         let mut name: Option<String> = None;
         let mut binding: Option<String> = None;
+   
         for attr in attributes {
             if attr.name.namespace.is_none() {
                 if attr.name.local_name == "name" {
@@ -206,6 +207,7 @@ impl WsdlPort {
         if let Some(ref pfx) = binding.prefix {
             binding.namespace = namespace.get(pfx).map(|x| x.to_string());
         }
+
         Ok(WsdlPort {
             name: name.ok_or_else(|| Error::WsdlError("Attribute `name` is mandatory for `wsdl:port` element.".to_string()))?,
             binding
@@ -215,13 +217,15 @@ impl WsdlPort {
 
 impl WsdlBinding {
     fn read(attributes: &[OwnedAttribute], namespace: &Namespace, iter: &mut Events<&[u8]>) -> Result<WsdlBinding, Error> {
-        let mut name: Option<String> = None;
+        let mut binding_name: Option<String> = None;
         let mut port_type: Option<String> = None;
+
+        let wsdl_ns = Some(NAMESPACE_WSDL.to_string());
 
         for attr in attributes {
             if attr.name.namespace.is_none() {
                 if attr.name.local_name == "name" {
-                    name = Some(attr.value.clone());
+                    binding_name = Some(attr.value.clone());
                 } else if attr.name.local_name == "type" {
                     port_type = Some(attr.value.clone());
                 }
@@ -242,12 +246,13 @@ impl WsdlBinding {
                     if name.local_name == "operation" => {
                         operations.push(WsdlOperationBinding::read(attributes, namespace)?);
                 },
-                XmlEvent::EndElement { .. } => {
-                    return Ok(WsdlBinding {
-                        name: name.ok_or_else(|| Error::WsdlError("Attribute `name` is mandatory for `wsdl:binding` element.".to_string()))?,
-                        port_type,
-                        operations
-                    });
+                XmlEvent::EndElement { ref name, .. }
+                    if name.local_name == "binding" && name.namespace == wsdl_ns => {; 
+                        return Ok(WsdlBinding {
+                            name: binding_name.ok_or_else(|| Error::WsdlError("Attribute `name` is mandatory for `wsdl:binding` element.".to_string()))?,
+                            port_type,
+                            operations
+                        });
                 },
                 _ => continue
             }
@@ -263,7 +268,7 @@ impl WsdlOperationBinding {
             .iter()
             .find(|a| a.name.namespace.is_none() && a.name.local_name == "name")
             .map(|a| a.value.clone());
-
+ 
         Ok(WsdlOperationBinding {
             name: name.ok_or_else(|| Error::WsdlError("Attribute `name` is mandatory for `wsdl:operation` element.".to_string()))?,
             input: None,
