@@ -130,9 +130,8 @@ impl Wsdl {
     fn read(attributes: &[OwnedAttribute], mut iter: &mut Events<&[u8]>) -> Result<Wsdl, Error> {
         let target_namespace = attributes
             .iter()
-            .filter(|a| a.name.namespace.is_none() && a.name.local_name == "targetNamespace")
-            .map(|a| a.value.clone())
-            .nth(0);
+            .find(|a| a.name.namespace.is_none() && a.name.local_name == "targetNamespace")
+            .map(|a| a.value.clone());
 
         let ns = Some(NAMESPACE_WSDL.to_string());
    
@@ -165,9 +164,8 @@ impl WsdlService {
     fn read(attributes: &[OwnedAttribute], iter: &mut Events<&[u8]>) -> Result<WsdlService, Error> {
         let name = attributes
             .iter()
-            .filter(|a| a.name.namespace.is_none() && a.name.local_name == "name")
-            .map(|a| a.value.clone())
-            .nth(0);
+            .find(|a| a.name.namespace.is_none() && a.name.local_name == "name")
+            .map(|a| a.value.clone());
 
         let mut ports = vec![];
 
@@ -186,6 +184,7 @@ impl WsdlService {
                 _ => continue
             }
         }
+  
         Err(Error::WsdlError("Invalid `wsdl:service` element.".to_string()))
     }
 }
