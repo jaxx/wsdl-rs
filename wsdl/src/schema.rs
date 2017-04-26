@@ -136,7 +136,7 @@ impl Wsdl {
             }
         }
 
-        let ns = Some(String::from(NAMESPACE_WSDL));
+        let ns = Some(NAMESPACE_WSDL.to_string());
    
         let mut services: Vec<WsdlService> = vec![];
         let mut bindings: Vec<WsdlBinding> = vec![];
@@ -179,14 +179,14 @@ impl WsdlService {
                 },
                 XmlEvent::EndElement { .. } => {
                     return Ok(WsdlService {
-                        name: name.ok_or_else(|| Error::WsdlError(String::from("Attribute `name` is mandatory for `wsdl:service` element.")))?,
+                        name: name.ok_or_else(|| Error::WsdlError("Attribute `name` is mandatory for `wsdl:service` element.".to_string()))?,
                         ports
                     });
                 },
                 _ => continue
             }
         }
-        Err(Error::WsdlError(String::from("Invalid `wsdl:service` element.")))
+        Err(Error::WsdlError("Invalid `wsdl:service` element.".to_string()))
     }
 }
 
@@ -203,12 +203,12 @@ impl WsdlPort {
                 }
             }
         }
-        let mut binding: OwnedName = binding.ok_or_else(|| Error::WsdlError(String::from("Attribute `binding` is mandatory for `wsdl:port` element.")))?.parse().unwrap();
+        let mut binding: OwnedName = binding.ok_or_else(|| Error::WsdlError("Attribute `binding` is mandatory for `wsdl:port` element.".to_string()))?.parse().unwrap();
         if let Some(ref pfx) = binding.prefix {
             binding.namespace = namespace.get(pfx).map(|x| x.to_string());
         }
         Ok(WsdlPort {
-            name: name.ok_or_else(|| Error::WsdlError(String::from("Attribute `name` is mandatory for `wsdl:port` element.")))?,
+            name: name.ok_or_else(|| Error::WsdlError("Attribute `name` is mandatory for `wsdl:port` element.".to_string()))?,
             binding
         })
     }
@@ -229,7 +229,7 @@ impl WsdlBinding {
             }
         }
 
-        let mut port_type: OwnedName = port_type.ok_or_else(|| Error::WsdlError(String::from("Attribute `type` is mandatory for `wsdl:binding` element.")))?.parse().unwrap();
+        let mut port_type: OwnedName = port_type.ok_or_else(|| Error::WsdlError("Attribute `type` is mandatory for `wsdl:binding` element.".to_string()))?.parse().unwrap();
 
         if let Some(ref pfx) = port_type.prefix {
             port_type.namespace = namespace.get(pfx).map(|x| x.to_string());
@@ -244,7 +244,7 @@ impl WsdlBinding {
                 },
                 XmlEvent::EndElement { .. } => {
                     return Ok(WsdlBinding {
-                        name: name.ok_or_else(|| Error::WsdlError(String::from("Attribute `name` is mandatory for `wsdl:binding` element.")))?,
+                        name: name.ok_or_else(|| Error::WsdlError("Attribute `name` is mandatory for `wsdl:binding` element.".to_string()))?,
                         port_type,
                         operations
                     });
@@ -253,7 +253,7 @@ impl WsdlBinding {
             }
         }
    
-        Err(Error::WsdlError(String::from("Invalid `wsdl:binding` element.")))
+        Err(Error::WsdlError("Invalid `wsdl:binding` element.".to_string()))
     }
 }
 
@@ -290,5 +290,5 @@ fn parse_wsdl(decoded_contents: &[u8]) -> Result<Wsdl, Error> {
         }
     }
 
-    Err(Error::WsdlError(String::from("Required `definitions` element is missing from WSDL document.")))
+    Err(Error::WsdlError("Required `definitions` element is missing from WSDL document.".to_string()))
 }
