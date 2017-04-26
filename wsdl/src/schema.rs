@@ -240,7 +240,7 @@ impl WsdlBinding {
             match event? {
                 XmlEvent::StartElement { ref name, ref attributes, ref namespace }
                     if name.local_name == "operation" => {
-                        operations.push(WsdlOperationBinding::read()?);
+                        operations.push(WsdlOperationBinding::read(attributes, namespace)?);
                 },
                 XmlEvent::EndElement { .. } => {
                     return Ok(WsdlBinding {
@@ -258,12 +258,17 @@ impl WsdlBinding {
 }
 
 impl WsdlOperationBinding {
-    fn read() -> Result<WsdlOperationBinding, Error> {
-        Ok(WsdlOperationBinding{
-            name: "operationbinding".into(),
-             input: None,
-             output: None,
-             fault: None
+    fn read(attributes: &[OwnedAttribute], namespace: &Namespace) -> Result<WsdlOperationBinding, Error> {
+        let name = attributes
+            .iter()
+            .find(|a| a.name.namespace.is_none() && a.name.local_name == "name")
+            .map(|a| a.value.clone());
+
+        Ok(WsdlOperationBinding {
+            name: name.ok_or_else(|| Error::WsdlError("Attribute `name` is mandatory for `wsdl:operation` element.".to_string()))?,
+            input: None,
+            output: None,
+            fault: None
         })
     }
 }
