@@ -31,14 +31,14 @@ macro_rules! documented {
 }
 
 pub trait NamedItem {
-    fn get_name(&self) -> &String;
+    fn get_name(&self) -> &str;
 }
 
 macro_rules! named_item {
     ($type_:ty) => {
         impl NamedItem for $type_ {
-            fn get_name(&self) -> &String {
-                &self.name
+            fn get_name(&self) -> &str {
+                self.name.as_str()
             }
         }
     }
