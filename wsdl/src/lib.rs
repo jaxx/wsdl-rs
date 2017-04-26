@@ -12,6 +12,7 @@ mod http;
 mod schema;
 
 pub use schema::{
+    Documented,
     NamedItem,
     Wsdl,
     WsdlBinding,

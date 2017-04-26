@@ -19,56 +19,15 @@ use encoding::types::decode;
 
 const NAMESPACE_WSDL: &'static str = "http://schemas.xmlsoap.org/wsdl/";
 
-#[derive(Debug)]
-pub struct Wsdl {
-    pub target_namespace: Option<String>,
-    pub services: Vec<WsdlService>
-}
-
-#[derive(Debug)]
-pub struct WsdlInputBinding {
+pub trait Documented {
 
 }
 
-#[derive(Debug)]
-pub struct WsdlOutputBinding {
-
-}
-
-#[derive(Debug)]
-pub struct WsdlFaultBinding {
-
-}
-
-#[derive(Debug)]
-pub struct WsdlOperationBinding {
-    pub name: String,
-    pub input: Option<WsdlInputBinding>,
-    pub output: Option<WsdlOutputBinding>,
-    pub fault: Option<WsdlFaultBinding>
-}
-
-#[derive(Debug)]
-pub struct WsdlBinding {
-    pub name: String,
-    pub port_type: OwnedName,
-    pub operations: Vec<WsdlOperationBinding>
-}
-
-#[derive(Debug)]
-pub struct WsdlPort {
-    pub name: String,
-    pub binding: OwnedName
-}
-
-#[derive(Debug)]
-pub struct WsdlService {
-    pub name: String,
-    pub ports: Vec<WsdlPort>
-}
-
-trait Documented {
-
+macro_rules! documented {
+    ($type_:ty) => {
+        impl Documented for $type_ {
+        }
+    }
 }
 
 pub trait NamedItem {
@@ -85,10 +44,74 @@ macro_rules! named_item {
     }
 }
 
-named_item!(WsdlService);
-named_item!(WsdlPort);
-named_item!(WsdlBinding);
+#[derive(Debug)]
+pub struct Wsdl {
+    pub target_namespace: Option<String>,
+    pub services: Vec<WsdlService>
+}
+
+documented!(Wsdl);
+
+#[derive(Debug)]
+pub struct WsdlInputBinding {
+
+}
+
+documented!(WsdlInputBinding);
+
+#[derive(Debug)]
+pub struct WsdlOutputBinding {
+
+}
+
+documented!(WsdlOutputBinding);
+
+#[derive(Debug)]
+pub struct WsdlFaultBinding {
+    pub name: String
+}
+
+documented!(WsdlFaultBinding);
+named_item!(WsdlFaultBinding);
+
+#[derive(Debug)]
+pub struct WsdlOperationBinding {
+    pub name: String,
+    pub input: Option<WsdlInputBinding>,
+    pub output: Option<WsdlOutputBinding>,
+    pub fault: Option<WsdlFaultBinding>
+}
+
+documented!(WsdlOperationBinding);
 named_item!(WsdlOperationBinding);
+
+#[derive(Debug)]
+pub struct WsdlBinding {
+    pub name: String,
+    pub port_type: OwnedName,
+    pub operations: Vec<WsdlOperationBinding>
+}
+
+documented!(WsdlBinding);
+named_item!(WsdlBinding);
+
+#[derive(Debug)]
+pub struct WsdlPort {
+    pub name: String,
+    pub binding: OwnedName
+}
+
+documented!(WsdlPort);
+named_item!(WsdlPort);
+
+#[derive(Debug)]
+pub struct WsdlService {
+    pub name: String,
+    pub ports: Vec<WsdlPort>
+}
+
+documented!(WsdlService);
+named_item!(WsdlService);
 
 impl Wsdl {
     pub fn load_from_url(url: &str) -> Result<Wsdl, Error> {
@@ -191,14 +214,6 @@ impl WsdlPort {
             binding
         })
     }
-}
-
-impl Documented for WsdlService {
-
-}
-
-impl Documented for WsdlPort {
-
 }
 
 fn decode_contents(bytes: &[u8]) -> Result<Vec<u8>, Error> {
