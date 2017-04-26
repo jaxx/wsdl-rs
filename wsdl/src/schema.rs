@@ -23,7 +23,7 @@ pub trait Documented {
 
 }
 
-macro_rules! documented {
+macro_rules! impl_documented {
     ($type:ty) => {
         impl Documented for $type {
         }
@@ -34,7 +34,7 @@ pub trait NamedItem {
     fn get_name(&self) -> &str;
 }
 
-macro_rules! named_item {
+macro_rules! impl_named_item {
     ($type:ty) => {
         impl NamedItem for $type {
             fn get_name(&self) -> &str {
@@ -51,29 +51,29 @@ pub struct Wsdl {
     pub bindings: Vec<WsdlBinding>
 }
 
-documented!(Wsdl);
+impl_documented!(Wsdl);
 
 #[derive(Debug)]
 pub struct WsdlInputBinding {
 
 }
 
-documented!(WsdlInputBinding);
+impl_documented!(WsdlInputBinding);
 
 #[derive(Debug)]
 pub struct WsdlOutputBinding {
 
 }
 
-documented!(WsdlOutputBinding);
+impl_documented!(WsdlOutputBinding);
 
 #[derive(Debug)]
 pub struct WsdlFaultBinding {
     pub name: String
 }
 
-documented!(WsdlFaultBinding);
-named_item!(WsdlFaultBinding);
+impl_documented!(WsdlFaultBinding);
+impl_named_item!(WsdlFaultBinding);
 
 #[derive(Debug)]
 pub struct WsdlOperationBinding {
@@ -83,8 +83,8 @@ pub struct WsdlOperationBinding {
     pub fault: Option<WsdlFaultBinding>
 }
 
-documented!(WsdlOperationBinding);
-named_item!(WsdlOperationBinding);
+impl_documented!(WsdlOperationBinding);
+impl_named_item!(WsdlOperationBinding);
 
 #[derive(Debug)]
 pub struct WsdlBinding {
@@ -93,8 +93,8 @@ pub struct WsdlBinding {
     pub operations: Vec<WsdlOperationBinding>
 }
 
-documented!(WsdlBinding);
-named_item!(WsdlBinding);
+impl_documented!(WsdlBinding);
+impl_named_item!(WsdlBinding);
 
 #[derive(Debug)]
 pub struct WsdlPort {
@@ -102,8 +102,8 @@ pub struct WsdlPort {
     pub binding: OwnedName
 }
 
-documented!(WsdlPort);
-named_item!(WsdlPort);
+impl_documented!(WsdlPort);
+impl_named_item!(WsdlPort);
 
 #[derive(Debug)]
 pub struct WsdlService {
@@ -111,8 +111,8 @@ pub struct WsdlService {
     pub ports: Vec<WsdlPort>
 }
 
-documented!(WsdlService);
-named_item!(WsdlService);
+impl_documented!(WsdlService);
+impl_named_item!(WsdlService);
 
 impl Wsdl {
     pub fn load_from_url(url: &str) -> Result<Wsdl, Error> {

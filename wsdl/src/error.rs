@@ -22,7 +22,7 @@ impl Display for Error {
             Error::WsdlError(ref e) => write!(f, "WSDL error: {}", e)
         }
     }
-}
+} 
 
 impl<'a> From<Cow<'a, str>> for Error {
     fn from(error: Cow<'a, str>) -> Error {
