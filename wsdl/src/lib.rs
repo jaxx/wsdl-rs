@@ -6,7 +6,10 @@ extern crate xml;
 extern crate encoding;
 extern crate xsd;
 
-mod error;
+#[macro_use]
+extern crate error_chain;
+
+mod errors;
 mod file;
 mod http;
 mod schema;

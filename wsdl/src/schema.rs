@@ -1,4 +1,4 @@
-use error::Error;
+use errors::*;
 
 use http;
 use file;
@@ -6,12 +6,7 @@ use file;
 use xml::attribute::OwnedAttribute;
 use xml::name::OwnedName;
 use xml::namespace::Namespace;
-
-use xml::reader::{
-    EventReader,
-    Events,
-    XmlEvent
-};
+use xml::reader::{EventReader, Events, XmlEvent };
 
 use encoding::all::UTF_8;
 use encoding::DecoderTrap;
@@ -115,19 +110,19 @@ impl_documented!(WsdlService);
 impl_named_item!(WsdlService);
 
 impl Wsdl {
-    pub fn load_from_url(url: &str) -> Result<Wsdl, Error> {
+    pub fn load_from_url(url: &str) -> Result<Wsdl> {
         let contents = http::get(url)?;
         let decoded_contents = decode_contents(&contents)?;
         parse_wsdl(&decoded_contents[..])
     }
 
-    pub fn load_from_file(location: &str) -> Result<Wsdl, Error> {
+    pub fn load_from_file(location: &str) -> Result<Wsdl> {
         let contents = file::load(location)?;
         let decoded_contents = decode_contents(&contents)?;
         parse_wsdl(&decoded_contents[..])
     }
 
-    fn read(attributes: &[OwnedAttribute], mut iter: &mut Events<&[u8]>) -> Result<Wsdl, Error> {
+    fn read(attributes: &[OwnedAttribute], mut iter: &mut Events<&[u8]>) -> Result<Wsdl> {
         let target_namespace = attributes
             .iter()
             .find(|a| a.name.namespace.is_none() && a.name.local_name == "targetNamespace")
@@ -161,7 +156,7 @@ impl Wsdl {
 }
 
 impl WsdlService {
-    fn read(attributes: &[OwnedAttribute], iter: &mut Events<&[u8]>) -> Result<WsdlService, Error> {
+    fn read(attributes: &[OwnedAttribute], iter: &mut Events<&[u8]>) -> Result<WsdlService> {
         let name = attributes
             .iter()
             .find(|a| a.name.namespace.is_none() && a.name.local_name == "name")
@@ -177,7 +172,8 @@ impl WsdlService {
                 },
                 XmlEvent::EndElement { .. } => {
                     return Ok(WsdlService {
-                        name: name.ok_or_else(|| Error::WsdlError("Attribute `name` is mandatory for `wsdl:service` element.".to_string()))?,
+                        //name: name.ok_or_else(|| Error::WsdlError("Attribute `name` is mandatory for `wsdl:service` element.".to_string()))?,
+                        name: name.ok_or_else(|| ErrorKind::MandatoryAttribute("name".to_string(), "wsdl:service".to_string()))?,
                         ports
                     });
                 },
@@ -185,12 +181,12 @@ impl WsdlService {
             }
         }
   
-        Err(Error::WsdlError("Invalid `wsdl:service` element.".to_string()))
+        Err(ErrorKind::InvalidElement("wsdl:service".to_string()).into())
     }
 }
 
 impl WsdlPort {
-    fn read(attributes: &[OwnedAttribute], namespace: &Namespace) -> Result<WsdlPort, Error> {
+    fn read(attributes: &[OwnedAttribute], namespace: &Namespace) -> Result<WsdlPort> {
         let mut name: Option<String> = None;
         let mut binding: Option<String> = None;
    
@@ -203,20 +199,20 @@ impl WsdlPort {
                 }
             }
         }
-        let mut binding: OwnedName = binding.ok_or_else(|| Error::WsdlError("Attribute `binding` is mandatory for `wsdl:port` element.".to_string()))?.parse().unwrap();
+        let mut binding: OwnedName = binding.ok_or_else(|| ErrorKind::MandatoryAttribute("binding".to_string(), "wsdl:port".to_string()))?.parse().unwrap();
         if let Some(ref pfx) = binding.prefix {
             binding.namespace = namespace.get(pfx).map(|x| x.to_string());
         }
 
         Ok(WsdlPort {
-            name: name.ok_or_else(|| Error::WsdlError("Attribute `name` is mandatory for `wsdl:port` element.".to_string()))?,
+            name: name.ok_or_else(|| ErrorKind::MandatoryAttribute("name".to_string(), "wsdl:port".to_string()))?,
             binding
         })
     }
 }
 
 impl WsdlBinding {
-    fn read(attributes: &[OwnedAttribute], namespace: &Namespace, iter: &mut Events<&[u8]>) -> Result<WsdlBinding, Error> {
+    fn read(attributes: &[OwnedAttribute], namespace: &Namespace, iter: &mut Events<&[u8]>) -> Result<WsdlBinding> {
         let mut binding_name: Option<String> = None;
         let mut port_type: Option<String> = None;
 
@@ -232,7 +228,7 @@ impl WsdlBinding {
             }
         }
 
-        let mut port_type: OwnedName = port_type.ok_or_else(|| Error::WsdlError("Attribute `type` is mandatory for `wsdl:binding` element.".to_string()))?.parse().unwrap();
+        let mut port_type: OwnedName = port_type.ok_or_else(|| ErrorKind::MandatoryAttribute("type".to_string(), "wsdl:binding".to_string()))?.parse().unwrap();
 
         if let Some(ref pfx) = port_type.prefix {
             port_type.namespace = namespace.get(pfx).map(|x| x.to_string());
@@ -249,7 +245,7 @@ impl WsdlBinding {
                 XmlEvent::EndElement { ref name, .. }
                     if name.local_name == "binding" && name.namespace == wsdl_ns => {; 
                         return Ok(WsdlBinding {
-                            name: binding_name.ok_or_else(|| Error::WsdlError("Attribute `name` is mandatory for `wsdl:binding` element.".to_string()))?,
+                            name: binding_name.ok_or_else(|| ErrorKind::MandatoryAttribute("name".to_string(), "wsdl:binding".to_string()))?,
                             port_type,
                             operations
                         });
@@ -258,19 +254,19 @@ impl WsdlBinding {
             }
         }
    
-        Err(Error::WsdlError("Invalid `wsdl:binding` element.".to_string()))
+        Err(ErrorKind::InvalidElement("wsdl:binding".to_string()).into())
     }
 }
 
 impl WsdlOperationBinding {
-    fn read(attributes: &[OwnedAttribute], namespace: &Namespace) -> Result<WsdlOperationBinding, Error> {
+    fn read(attributes: &[OwnedAttribute], namespace: &Namespace) -> Result<WsdlOperationBinding> {
         let name = attributes
             .iter()
             .find(|a| a.name.namespace.is_none() && a.name.local_name == "name")
             .map(|a| a.value.clone());
  
         Ok(WsdlOperationBinding {
-            name: name.ok_or_else(|| Error::WsdlError("Attribute `name` is mandatory for `wsdl:operation` element.".to_string()))?,
+            name: name.ok_or_else(|| ErrorKind::MandatoryAttribute("name".to_string(), "wsdl:operation".to_string()))?,
             input: None,
             output: None,
             fault: None
@@ -278,12 +274,12 @@ impl WsdlOperationBinding {
     }
 }
 
-fn decode_contents(bytes: &[u8]) -> Result<Vec<u8>, Error> {
+fn decode_contents(bytes: &[u8]) -> Result<Vec<u8>> {
     let (decoded_contents, _) = decode(bytes, DecoderTrap::Replace, UTF_8);
     Ok(decoded_contents?.as_bytes().to_vec())
 }
 
-fn parse_wsdl(decoded_contents: &[u8]) -> Result<Wsdl, Error> {
+fn parse_wsdl(decoded_contents: &[u8]) -> Result<Wsdl> {
     let parser = EventReader::new(decoded_contents);
     let mut iter = parser.into_iter();
 
@@ -301,5 +297,5 @@ fn parse_wsdl(decoded_contents: &[u8]) -> Result<Wsdl, Error> {
         }
     }
 
-    Err(Error::WsdlError("Required `definitions` element is missing from WSDL document.".to_string()))
+    Err(ErrorKind::MissingElement("definitions".to_string()).into())
 }
