@@ -1,9 +1,6 @@
 extern crate wsdl;
 
-use wsdl::{
-    NamedItem,
-    Wsdl
-};
+use wsdl::{NamedItem, Wsdl};
 
 fn print_name(named_item: &NamedItem) {
     println!("Name is: {}", named_item.get_name());

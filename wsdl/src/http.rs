@@ -1,9 +1,8 @@
 use std::io::Read;
-
 use hyper::Client;
-use hyper::error::Error;
+use errors::*;
 
-pub fn get(url: &str) -> Result<Vec<u8>, Error> {
+pub fn get(url: &str) -> Result<Vec<u8>> {
     let client = Client::new();
     let mut bytes = Vec::new();
 
