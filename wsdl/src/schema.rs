@@ -172,7 +172,6 @@ impl WsdlService {
                 },
                 XmlEvent::EndElement { .. } => {
                     return Ok(WsdlService {
-                        //name: name.ok_or_else(|| Error::WsdlError("Attribute `name` is mandatory for `wsdl:service` element.".to_string()))?,
                         name: name.ok_or_else(|| ErrorKind::MandatoryAttribute("name".to_string(), "wsdl:service".to_string()))?,
                         ports
                     });

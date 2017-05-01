@@ -4,7 +4,6 @@ use std::borrow::Cow;
 use hyper::Error as HyperError;
 use xml::reader::Error as XmlError;
 
-
 error_chain! {
     foreign_links {
         Io(IoError);
