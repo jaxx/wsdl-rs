@@ -1,6 +1,3 @@
 mod schema;
 
-pub use schema::{
-    Form,
-    Schema
-};
+pub use schema::{Form, Schema};
