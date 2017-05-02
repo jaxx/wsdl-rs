@@ -43,10 +43,57 @@ macro_rules! impl_named_item {
 pub struct Wsdl {
     pub target_namespace: Option<String>,
     pub services: Vec<WsdlService>,
-    pub bindings: Vec<WsdlBinding>
+    pub bindings: Vec<WsdlBinding>,
+    pub messages: Vec<WsdlMessage>
 }
 
 impl_documented!(Wsdl);
+
+#[derive(Debug)]
+pub struct WsdlService {
+    pub name: String,
+    pub ports: Vec<WsdlPort>
+}
+
+impl_documented!(WsdlService);
+impl_named_item!(WsdlService);
+
+#[derive(Debug)]
+pub struct WsdlBinding {
+    pub name: String,
+    pub port_type: OwnedName,
+    pub operations: Vec<WsdlOperationBinding>
+}
+
+impl_documented!(WsdlBinding);
+impl_named_item!(WsdlBinding);
+
+#[derive(Debug)]
+pub struct WsdlMessage {
+    pub name: String
+}
+
+impl_named_item!(WsdlMessage);
+
+#[derive(Debug)]
+pub struct WsdlPort {
+    pub name: String,
+    pub binding: OwnedName
+}
+
+impl_documented!(WsdlPort);
+impl_named_item!(WsdlPort);
+
+#[derive(Debug)]
+pub struct WsdlOperationBinding {
+    pub name: String,
+    pub input: Option<WsdlInputBinding>,
+    pub output: Option<WsdlOutputBinding>,
+    pub fault: Option<WsdlFaultBinding>
+}
+
+impl_documented!(WsdlOperationBinding);
+impl_named_item!(WsdlOperationBinding);
 
 #[derive(Debug)]
 pub struct WsdlInputBinding {
@@ -70,45 +117,6 @@ pub struct WsdlFaultBinding {
 impl_documented!(WsdlFaultBinding);
 impl_named_item!(WsdlFaultBinding);
 
-#[derive(Debug)]
-pub struct WsdlOperationBinding {
-    pub name: String,
-    pub input: Option<WsdlInputBinding>,
-    pub output: Option<WsdlOutputBinding>,
-    pub fault: Option<WsdlFaultBinding>
-}
-
-impl_documented!(WsdlOperationBinding);
-impl_named_item!(WsdlOperationBinding);
-
-#[derive(Debug)]
-pub struct WsdlBinding {
-    pub name: String,
-    pub port_type: OwnedName,
-    pub operations: Vec<WsdlOperationBinding>
-}
-
-impl_documented!(WsdlBinding);
-impl_named_item!(WsdlBinding);
-
-#[derive(Debug)]
-pub struct WsdlPort {
-    pub name: String,
-    pub binding: OwnedName
-}
-
-impl_documented!(WsdlPort);
-impl_named_item!(WsdlPort);
-
-#[derive(Debug)]
-pub struct WsdlService {
-    pub name: String,
-    pub ports: Vec<WsdlPort>
-}
-
-impl_documented!(WsdlService);
-impl_named_item!(WsdlService);
-
 impl Wsdl {
     pub fn load_from_url(url: &str) -> Result<Wsdl> {
         let contents = http::get(url)?;
@@ -130,8 +138,9 @@ impl Wsdl {
 
         let wsdl_ns = Some(NAMESPACE_WSDL.to_string());
    
-        let mut services: Vec<WsdlService> = vec![];
-        let mut bindings: Vec<WsdlBinding> = vec![];
+        let mut services = Vec::new();
+        let mut bindings = Vec::new();
+        let mut messages = Vec::new();
 
         while let Some(v) = iter.next() {
             match v? {
@@ -143,14 +152,19 @@ impl Wsdl {
                     if name.namespace == wsdl_ns && name.local_name == "binding" => {
                         bindings.push(WsdlBinding::read(attributes, namespace, &mut iter)?)
                 },
+                XmlEvent::StartElement { ref name, ref attributes, .. }
+                    if name.namespace == wsdl_ns && name.local_name == "message" => {
+                        messages.push(WsdlMessage::read(attributes, &mut iter)?);
+                },
                 _ => continue
             }
         }
 
         Ok(Wsdl {
-            services,
             target_namespace,
-            bindings
+            services,
+            bindings,
+            messages
         })
     }
 }
@@ -162,7 +176,7 @@ impl WsdlService {
             .find(|a| a.name.namespace.is_none() && a.name.local_name == "name")
             .map(|a| a.value.clone());
 
-        let mut ports = vec![];
+        let mut ports = Vec::new();
 
         for event in iter {
             match event? {
@@ -184,36 +198,10 @@ impl WsdlService {
     }
 }
 
-impl WsdlPort {
-    fn read(attributes: &[OwnedAttribute], namespace: &Namespace) -> Result<WsdlPort> {
-        let mut name: Option<String> = None;
-        let mut binding: Option<String> = None;
-   
-        for attr in attributes {
-            if attr.name.namespace.is_none() {
-                if attr.name.local_name == "name" {
-                    name = Some(attr.value.clone());
-                } else if attr.name.local_name == "binding" {
-                    binding = Some(attr.value.clone());
-                }
-            }
-        }
-        let mut binding: OwnedName = binding.ok_or_else(|| ErrorKind::MandatoryAttribute("binding".to_string(), "wsdl:port".to_string()))?.parse().unwrap();
-        if let Some(ref pfx) = binding.prefix {
-            binding.namespace = namespace.get(pfx).map(|x| x.to_string());
-        }
-
-        Ok(WsdlPort {
-            name: name.ok_or_else(|| ErrorKind::MandatoryAttribute("name".to_string(), "wsdl:port".to_string()))?,
-            binding
-        })
-    }
-}
-
 impl WsdlBinding {
     fn read(attributes: &[OwnedAttribute], namespace: &Namespace, iter: &mut Events<&[u8]>) -> Result<WsdlBinding> {
-        let mut binding_name: Option<String> = None;
-        let mut port_type: Option<String> = None;
+        let mut binding_name = None;
+        let mut port_type = None;
 
         let wsdl_ns = Some(NAMESPACE_WSDL.to_string());
 
@@ -233,7 +221,7 @@ impl WsdlBinding {
             port_type.namespace = namespace.get(pfx).map(|x| x.to_string());
         }
 
-        let mut operations: Vec<WsdlOperationBinding> = vec![];
+        let mut operations = Vec::new();
 
         for event in iter {
             match event? {
@@ -254,6 +242,45 @@ impl WsdlBinding {
         }
    
         Err(ErrorKind::InvalidElement("wsdl:binding".to_string()).into())
+    }
+}
+
+impl WsdlMessage {
+    fn read(attributes: &[OwnedAttribute], iter: &mut Events<&[u8]>) -> Result<WsdlMessage> {
+        let name = attributes
+            .iter()
+            .find(|a| a.name.namespace.is_none() && a.name.local_name == "name")
+            .map(|a| a.value.clone());
+
+        Ok(WsdlMessage {
+            name: name.ok_or_else(|| ErrorKind::MandatoryAttribute("name".to_string(), "wsdl:message".to_string()))?,
+        })
+    }
+}
+
+impl WsdlPort {
+    fn read(attributes: &[OwnedAttribute], namespace: &Namespace) -> Result<WsdlPort> {
+        let mut name = None;
+        let mut binding = None;
+   
+        for attr in attributes {
+            if attr.name.namespace.is_none() {
+                if attr.name.local_name == "name" {
+                    name = Some(attr.value.clone());
+                } else if attr.name.local_name == "binding" {
+                    binding = Some(attr.value.clone());
+                }
+            }
+        }
+        let mut binding: OwnedName = binding.ok_or_else(|| ErrorKind::MandatoryAttribute("binding".to_string(), "wsdl:port".to_string()))?.parse().unwrap();
+        if let Some(ref pfx) = binding.prefix {
+            binding.namespace = namespace.get(pfx).map(|x| x.to_string());
+        }
+
+        Ok(WsdlPort {
+            name: name.ok_or_else(|| ErrorKind::MandatoryAttribute("name".to_string(), "wsdl:port".to_string()))?,
+            binding
+        })
     }
 }
 
