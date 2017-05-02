@@ -177,7 +177,8 @@ impl Wsdl {
 
 impl WsdlService {
     fn read(attributes: &[OwnedAttribute], iter: &mut Events<&[u8]>) -> Result<WsdlService> {
-        let name = attributes
+        let ns_wsdl = Some(NS_WSDL.to_string());
+        let service_name = attributes
             .iter()
             .find(|a| a.name.namespace.is_none() && a.name.local_name == "name")
             .map(|a| a.value.clone());
@@ -190,11 +191,12 @@ impl WsdlService {
                     if name.local_name == "port" => {
                         ports.push(WsdlPort::read(attributes, namespace)?);
                 },
-                XmlEvent::EndElement { .. } => {
-                    return Ok(WsdlService {
-                        name: name.ok_or_else(|| ErrorKind::MandatoryAttribute("name".to_string(), "wsdl:service".to_string()))?,
-                        ports
-                    });
+                XmlEvent::EndElement { ref name, .. }
+                    if name.namespace == ns_wsdl && name.local_name == "service" => {
+                        return Ok(WsdlService {
+                            name: service_name.ok_or_else(|| ErrorKind::MandatoryAttribute("name".to_string(), "wsdl:service".to_string()))?,
+                            ports
+                        });
                 },
                 _ => continue
             }
@@ -253,7 +255,7 @@ impl WsdlBinding {
 impl WsdlMessage {
     fn read(attributes: &[OwnedAttribute], iter: &mut Events<&[u8]>) -> Result<WsdlMessage> {
         let ns_wsdl = Some(NS_WSDL.to_string());
-        let name = attributes
+        let message_name = attributes
             .iter()
             .find(|a| a.name.namespace.is_none() && a.name.local_name == "name")
             .map(|a| a.value.clone());
@@ -266,11 +268,12 @@ impl WsdlMessage {
                     if name.namespace == ns_wsdl && name.local_name == "part" => {
                         //parts.push(WsdlOperationBinding::read(attributes, namespace)?);
                 },
-                XmlEvent::EndElement { .. } => {
-                    return Ok(WsdlMessage {
-                        name: name.ok_or_else(|| ErrorKind::MandatoryAttribute("name".to_string(), "wsdl:message".to_string()))?,
-                        parts
-                    });
+                XmlEvent::EndElement { ref name, .. }
+                    if name.namespace == ns_wsdl && name.local_name == "message" => {
+                        return Ok(WsdlMessage {
+                            name: message_name.ok_or_else(|| ErrorKind::MandatoryAttribute("name".to_string(), "wsdl:message".to_string()))?,
+                            parts
+                        });
                 },
                 _ => continue
             }
