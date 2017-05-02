@@ -141,10 +141,7 @@ impl Wsdl {
 
     fn read(attributes: &[OwnedAttribute], mut iter: &mut Events<&[u8]>) -> Result<Wsdl> {
         let ns_wsdl = Some(NS_WSDL.to_string());
-        let target_namespace = attributes
-            .iter()
-            .find(|a| a.name.namespace.is_none() && a.name.local_name == "targetNamespace")
-            .map(|a| a.value.clone());
+        let target_namespace = find_attribute("targetNamespace", attributes);
 
         let mut services = Vec::new();
         let mut bindings = Vec::new();
@@ -180,10 +177,7 @@ impl Wsdl {
 impl WsdlService {
     fn read(attributes: &[OwnedAttribute], iter: &mut Events<&[u8]>) -> Result<WsdlService> {
         let ns_wsdl = Some(NS_WSDL.to_string());
-        let service_name = attributes
-            .iter()
-            .find(|a| a.name.namespace.is_none() && a.name.local_name == "name")
-            .map(|a| a.value.clone());
+        let service_name = find_attribute("name", attributes);
 
         let mut ports = Vec::new();
 
@@ -257,10 +251,7 @@ impl WsdlBinding {
 impl WsdlMessage {
     fn read(attributes: &[OwnedAttribute], iter: &mut Events<&[u8]>) -> Result<WsdlMessage> {
         let ns_wsdl = Some(NS_WSDL.to_string());
-        let message_name = attributes
-            .iter()
-            .find(|a| a.name.namespace.is_none() && a.name.local_name == "name")
-            .map(|a| a.value.clone());
+        let message_name = find_attribute("name", attributes);
 
         let mut parts = Vec::new();
         
@@ -313,10 +304,7 @@ impl WsdlPort {
 
 impl WsdlOperationBinding {
     fn read(attributes: &[OwnedAttribute], namespace: &Namespace) -> Result<WsdlOperationBinding> {
-        let name = attributes
-            .iter()
-            .find(|a| a.name.namespace.is_none() && a.name.local_name == "name")
-            .map(|a| a.value.clone());
+        let name = find_attribute("name", attributes);
  
         Ok(WsdlOperationBinding {
             name: name.ok_or_else(|| ErrorKind::MandatoryAttribute("name".to_string(), "wsdl:operation".to_string()))?,
@@ -329,10 +317,7 @@ impl WsdlOperationBinding {
 
 impl WsdlMessagePart {
     fn read(attributes: &[OwnedAttribute]) -> Result<WsdlMessagePart> {
-        let part_name = attributes
-            .iter()
-            .find(|a| a.name.namespace.is_none() && a.name.local_name == "name")
-            .map(|a| a.value.clone());
+        let part_name = find_attribute("name", attributes);
 
         Ok(WsdlMessagePart {
             name: part_name.ok_or_else(|| ErrorKind::MandatoryAttribute("name".to_string(), "wsdl:part".to_string()))?,
@@ -365,4 +350,11 @@ fn parse_wsdl(decoded_contents: &[u8]) -> Result<Wsdl> {
     }
 
     Err(ErrorKind::MissingElement("definitions".to_string()).into())
+}
+
+fn find_attribute(name: &str, attributes: &[OwnedAttribute]) -> Option<String> {
+    attributes
+        .iter()
+        .find(|a| a.name.namespace.is_none() && a.name.local_name == name)
+        .map(|a| a.value.clone())
 }
