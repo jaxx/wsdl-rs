@@ -12,7 +12,7 @@ use encoding::all::UTF_8;
 use encoding::DecoderTrap;
 use encoding::types::decode;
 
-const NAMESPACE_WSDL: &'static str = "http://schemas.xmlsoap.org/wsdl/";
+const NS_WSDL: &'static str = "http://schemas.xmlsoap.org/wsdl/";
 
 pub trait Documented {
 
@@ -70,9 +70,11 @@ impl_named_item!(WsdlBinding);
 
 #[derive(Debug)]
 pub struct WsdlMessage {
-    pub name: String
+    pub name: String,
+    pub parts: Vec<WsdlMessagePart>
 }
 
+impl_documented!(WsdlMessage);
 impl_named_item!(WsdlMessage);
 
 #[derive(Debug)]
@@ -94,6 +96,11 @@ pub struct WsdlOperationBinding {
 
 impl_documented!(WsdlOperationBinding);
 impl_named_item!(WsdlOperationBinding);
+
+#[derive(Debug)]
+pub struct WsdlMessagePart {
+
+}
 
 #[derive(Debug)]
 pub struct WsdlInputBinding {
@@ -131,13 +138,12 @@ impl Wsdl {
     }
 
     fn read(attributes: &[OwnedAttribute], mut iter: &mut Events<&[u8]>) -> Result<Wsdl> {
+        let ns_wsdl = Some(NS_WSDL.to_string());
         let target_namespace = attributes
             .iter()
             .find(|a| a.name.namespace.is_none() && a.name.local_name == "targetNamespace")
             .map(|a| a.value.clone());
 
-        let wsdl_ns = Some(NAMESPACE_WSDL.to_string());
-   
         let mut services = Vec::new();
         let mut bindings = Vec::new();
         let mut messages = Vec::new();
@@ -145,15 +151,15 @@ impl Wsdl {
         while let Some(v) = iter.next() {
             match v? {
                 XmlEvent::StartElement { ref name, ref attributes, .. }
-                    if name.namespace == wsdl_ns && name.local_name == "service" => {
+                    if name.namespace == ns_wsdl && name.local_name == "service" => {
                         services.push(WsdlService::read(attributes, &mut iter)?);
                 },
                 XmlEvent::StartElement { ref name, ref attributes, ref namespace }
-                    if name.namespace == wsdl_ns && name.local_name == "binding" => {
+                    if name.namespace == ns_wsdl && name.local_name == "binding" => {
                         bindings.push(WsdlBinding::read(attributes, namespace, &mut iter)?)
                 },
                 XmlEvent::StartElement { ref name, ref attributes, .. }
-                    if name.namespace == wsdl_ns && name.local_name == "message" => {
+                    if name.namespace == ns_wsdl && name.local_name == "message" => {
                         messages.push(WsdlMessage::read(attributes, &mut iter)?);
                 },
                 _ => continue
@@ -200,10 +206,9 @@ impl WsdlService {
 
 impl WsdlBinding {
     fn read(attributes: &[OwnedAttribute], namespace: &Namespace, iter: &mut Events<&[u8]>) -> Result<WsdlBinding> {
+        let ns_wsdl = Some(NS_WSDL.to_string());
         let mut binding_name = None;
         let mut port_type = None;
-
-        let wsdl_ns = Some(NAMESPACE_WSDL.to_string());
 
         for attr in attributes {
             if attr.name.namespace.is_none() {
@@ -226,11 +231,11 @@ impl WsdlBinding {
         for event in iter {
             match event? {
                 XmlEvent::StartElement { ref name, ref attributes, ref namespace }
-                    if name.namespace == wsdl_ns && name.local_name == "operation" => {
+                    if name.namespace == ns_wsdl && name.local_name == "operation" => {
                         operations.push(WsdlOperationBinding::read(attributes, namespace)?);
                 },
                 XmlEvent::EndElement { ref name, .. }
-                    if name.local_name == "binding" && name.namespace == wsdl_ns => {; 
+                    if name.namespace == ns_wsdl && name.local_name == "binding" => {; 
                         return Ok(WsdlBinding {
                             name: binding_name.ok_or_else(|| ErrorKind::MandatoryAttribute("name".to_string(), "wsdl:binding".to_string()))?,
                             port_type,
@@ -247,14 +252,31 @@ impl WsdlBinding {
 
 impl WsdlMessage {
     fn read(attributes: &[OwnedAttribute], iter: &mut Events<&[u8]>) -> Result<WsdlMessage> {
+        let ns_wsdl = Some(NS_WSDL.to_string());
         let name = attributes
             .iter()
             .find(|a| a.name.namespace.is_none() && a.name.local_name == "name")
             .map(|a| a.value.clone());
 
-        Ok(WsdlMessage {
-            name: name.ok_or_else(|| ErrorKind::MandatoryAttribute("name".to_string(), "wsdl:message".to_string()))?,
-        })
+        let mut parts = Vec::new();
+        
+        for event in iter {
+            match event? {
+                XmlEvent::StartElement { ref name, ref attributes, .. }
+                    if name.namespace == ns_wsdl && name.local_name == "part" => {
+                        //parts.push(WsdlOperationBinding::read(attributes, namespace)?);
+                },
+                XmlEvent::EndElement { .. } => {
+                    return Ok(WsdlMessage {
+                        name: name.ok_or_else(|| ErrorKind::MandatoryAttribute("name".to_string(), "wsdl:message".to_string()))?,
+                        parts
+                    });
+                },
+                _ => continue
+            }
+        }
+
+        Err(ErrorKind::InvalidElement("wsdl:message".to_string()).into())
     }
 }
 
@@ -306,17 +328,16 @@ fn decode_contents(bytes: &[u8]) -> Result<Vec<u8>> {
 }
 
 fn parse_wsdl(decoded_contents: &[u8]) -> Result<Wsdl> {
+    let ns_wsdl = Some(NS_WSDL.to_string());
     let parser = EventReader::new(decoded_contents);
     let mut iter = parser.into_iter();
-
-    let wsdl_ns = Some(NAMESPACE_WSDL.to_string());
 
     while let Some(v) = iter.next() {
         match v? {
             XmlEvent::StartDocument { .. } => continue,
             XmlEvent::EndDocument => break,
             XmlEvent::StartElement { ref name, ref attributes, .. }
-                if name.namespace == wsdl_ns && name.local_name == "definitions" => {
+                if name.namespace == ns_wsdl && name.local_name == "definitions" => {
                     return Wsdl::read(attributes, &mut iter);
             },
             e => println!("Unexpected element in WSDL document: {:?}", e)
