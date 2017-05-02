@@ -268,7 +268,7 @@ impl WsdlMessage {
             match event? {
                 XmlEvent::StartElement { ref name, ref attributes, .. }
                     if name.namespace == ns_wsdl && name.local_name == "part" => {
-                        parts.push(WsdlMessagePart::read()?);
+                        parts.push(WsdlMessagePart::read(attributes)?);
                 },
                 XmlEvent::EndElement { ref name, .. }
                     if name.namespace == ns_wsdl && name.local_name == "message" => {
@@ -328,9 +328,14 @@ impl WsdlOperationBinding {
 }
 
 impl WsdlMessagePart {
-    fn read() -> Result<WsdlMessagePart> {
+    fn read(attributes: &[OwnedAttribute]) -> Result<WsdlMessagePart> {
+        let part_name = attributes
+            .iter()
+            .find(|a| a.name.namespace.is_none() && a.name.local_name == "name")
+            .map(|a| a.value.clone());
+
         Ok(WsdlMessagePart {
-            name: "".to_string(),
+            name: part_name.ok_or_else(|| ErrorKind::MandatoryAttribute("name".to_string(), "wsdl:part".to_string()))?,
             element: None,
             part_type: None
         })
