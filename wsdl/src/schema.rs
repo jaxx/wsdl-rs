@@ -197,7 +197,7 @@ impl WsdlService {
                 _ => continue
             }
         }
-  
+
         Err(ErrorKind::InvalidElement("wsdl:service".to_string()).into())
     }
 }
@@ -230,7 +230,7 @@ impl WsdlBinding {
             match event? {
                 XmlEvent::StartElement { ref name, ref attributes, ref namespace }
                     if name.namespace == ns_wsdl && name.local_name == "operation" => {
-                        operations.push(WsdlOperationBinding::read(attributes, namespace)?);
+                        operations.push(WsdlOperationBinding::read(attributes)?);
                 },
                 XmlEvent::EndElement { ref name, .. }
                     if name.namespace == ns_wsdl && name.local_name == "binding" => {; 
@@ -243,7 +243,7 @@ impl WsdlBinding {
                 _ => continue
             }
         }
-   
+
         Err(ErrorKind::InvalidElement("wsdl:binding".to_string()).into())
     }
 }
@@ -254,12 +254,12 @@ impl WsdlMessage {
         let message_name = find_attribute("name", attributes);
 
         let mut parts = Vec::new();
-        
+
         for event in iter {
             match event? {
-                XmlEvent::StartElement { ref name, ref attributes, .. }
+                XmlEvent::StartElement { ref name, ref attributes, ref namespace }
                     if name.namespace == ns_wsdl && name.local_name == "part" => {
-                        parts.push(WsdlMessagePart::read(attributes)?);
+                        parts.push(WsdlMessagePart::read(attributes, namespace)?);
                 },
                 XmlEvent::EndElement { ref name, .. }
                     if name.namespace == ns_wsdl && name.local_name == "message" => {
@@ -280,7 +280,7 @@ impl WsdlPort {
     fn read(attributes: &[OwnedAttribute], namespace: &Namespace) -> Result<WsdlPort> {
         let mut name = None;
         let mut binding = None;
-   
+
         for attr in attributes {
             if attr.name.namespace.is_none() {
                 if attr.name.local_name == "name" {
@@ -290,7 +290,9 @@ impl WsdlPort {
                 }
             }
         }
+
         let mut binding: OwnedName = binding.ok_or_else(|| ErrorKind::MandatoryAttribute("binding".to_string(), "wsdl:port".to_string()))?.parse().unwrap();
+
         if let Some(ref pfx) = binding.prefix {
             binding.namespace = namespace.get(pfx).map(|x| x.to_string());
         }
@@ -303,9 +305,9 @@ impl WsdlPort {
 }
 
 impl WsdlOperationBinding {
-    fn read(attributes: &[OwnedAttribute], namespace: &Namespace) -> Result<WsdlOperationBinding> {
+    fn read(attributes: &[OwnedAttribute]) -> Result<WsdlOperationBinding> {
         let name = find_attribute("name", attributes);
- 
+
         Ok(WsdlOperationBinding {
             name: name.ok_or_else(|| ErrorKind::MandatoryAttribute("name".to_string(), "wsdl:operation".to_string()))?,
             input: None,
@@ -316,7 +318,7 @@ impl WsdlOperationBinding {
 }
 
 impl WsdlMessagePart {
-    fn read(attributes: &[OwnedAttribute]) -> Result<WsdlMessagePart> {
+    fn read(attributes: &[OwnedAttribute], namespace: &Namespace) -> Result<WsdlMessagePart> {
         let part_name = find_attribute("name", attributes);
 
         Ok(WsdlMessagePart {
@@ -339,13 +341,11 @@ fn parse_wsdl(decoded_contents: &[u8]) -> Result<Wsdl> {
 
     while let Some(v) = iter.next() {
         match v? {
-            XmlEvent::StartDocument { .. } => continue,
-            XmlEvent::EndDocument => break,
             XmlEvent::StartElement { ref name, ref attributes, .. }
                 if name.namespace == ns_wsdl && name.local_name == "definitions" => {
                     return Wsdl::read(attributes, &mut iter);
             },
-            e => println!("Unexpected element in WSDL document: {:?}", e)
+            _ => continue
         }
     }
 
