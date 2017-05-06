@@ -364,7 +364,24 @@ mod tests {
     use super::*;
 
     #[test]
-    fn parse_from_string() {
-        assert!(Wsdl::parse("<?xml version='1.0' encoding='utf-8'?><definitions />".as_bytes()).is_ok())
+    fn must_check_depth() {
+        let result = Wsdl::parse(r#"<?xml version="1.0" encoding="utf-8"?>
+<wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">
+    <wsdl:service name="root1">
+        <wsdl:service name="wrapped1" />
+        <wsdl:service name="wrapped2" />
+    </wsdl:service>
+    <wsdl:service name="root2">
+    </wsdl:service>
+</wsdl:definitions>
+"#.as_bytes());
+
+        assert!(result.is_ok());
+
+        let wsdl = result.unwrap();
+
+        assert_eq!(2, wsdl.services.len());
+        assert_eq!("root1", wsdl.services[0].name);
+        assert_eq!("root2", wsdl.services[1].name);
     }
 }
