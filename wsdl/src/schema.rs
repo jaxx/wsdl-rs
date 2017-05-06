@@ -15,12 +15,15 @@ use encoding::types::decode;
 const NS_WSDL: &'static str = "http://schemas.xmlsoap.org/wsdl/";
 
 pub trait Documented {
-
+    fn get_documentation(&self) -> &Option<WsdlDocumentation>;
 }
 
 macro_rules! impl_documented {
     ($type:ty) => {
         impl Documented for $type {
+            fn get_documentation(&self) -> &Option<WsdlDocumentation> {
+                &self.documentation
+            }
         }
     }
 }
@@ -41,7 +44,10 @@ macro_rules! impl_named_item {
 
 #[derive(Debug)]
 pub struct Wsdl {
+    pub documentation: Option<WsdlDocumentation>,
     pub target_namespace: Option<String>,
+    pub types: Vec<WsdlTypes>,
+    pub port_types: Vec<WsdlPortType>,
     pub services: Vec<WsdlService>,
     pub bindings: Vec<WsdlBinding>,
     pub messages: Vec<WsdlMessage>
@@ -51,6 +57,7 @@ impl_documented!(Wsdl);
 
 #[derive(Debug)]
 pub struct WsdlService {
+    pub documentation: Option<WsdlDocumentation>,
     pub name: String,
     pub ports: Vec<WsdlPort>
 }
@@ -60,6 +67,7 @@ impl_named_item!(WsdlService);
 
 #[derive(Debug)]
 pub struct WsdlBinding {
+    pub documentation: Option<WsdlDocumentation>,
     pub name: String,
     pub port_type: OwnedName,
     pub operations: Vec<WsdlOperationBinding>
@@ -70,6 +78,7 @@ impl_named_item!(WsdlBinding);
 
 #[derive(Debug)]
 pub struct WsdlMessage {
+    pub documentation: Option<WsdlDocumentation>,
     pub name: String,
     pub parts: Vec<WsdlMessagePart>
 }
@@ -79,6 +88,7 @@ impl_named_item!(WsdlMessage);
 
 #[derive(Debug)]
 pub struct WsdlPort {
+    pub documentation: Option<WsdlDocumentation>,
     pub name: String,
     pub binding: OwnedName
 }
@@ -88,6 +98,7 @@ impl_named_item!(WsdlPort);
 
 #[derive(Debug)]
 pub struct WsdlOperationBinding {
+    pub documentation: Option<WsdlDocumentation>,
     pub name: String,
     pub input: Option<WsdlInputBinding>,
     pub output: Option<WsdlOutputBinding>,
@@ -106,25 +117,47 @@ pub struct WsdlMessagePart {
 
 #[derive(Debug)]
 pub struct WsdlInputBinding {
-
+    pub documentation: Option<WsdlDocumentation>
 }
 
 impl_documented!(WsdlInputBinding);
 
 #[derive(Debug)]
 pub struct WsdlOutputBinding {
-
+    pub documentation: Option<WsdlDocumentation>
 }
 
 impl_documented!(WsdlOutputBinding);
 
 #[derive(Debug)]
 pub struct WsdlFaultBinding {
+    pub documentation: Option<WsdlDocumentation>,
     pub name: String
 }
 
 impl_documented!(WsdlFaultBinding);
 impl_named_item!(WsdlFaultBinding);
+
+#[derive(Debug)]
+pub struct WsdlTypes {
+    pub documentation: Option<WsdlDocumentation>
+}
+
+impl_documented!(WsdlTypes);
+
+#[derive(Debug)]
+pub struct WsdlPortType {
+    pub documentation: Option<WsdlDocumentation>,
+    pub name: String
+}
+
+impl_documented!(WsdlPortType);
+impl_named_item!(WsdlPortType);
+
+#[derive(Debug)]
+pub struct WsdlDocumentation {
+
+}
 
 impl Wsdl {
     pub fn load_from_url(url: &str) -> Result<Wsdl> {
@@ -161,30 +194,49 @@ impl Wsdl {
         let ns_wsdl = Some(NS_WSDL.to_string());
         let target_namespace = find_attribute("targetNamespace", attributes);
 
+        let mut depth = 0;
+        let mut documentation = None;
+        let mut types = Vec::new();
+        let mut port_types = Vec::new();
         let mut services = Vec::new();
         let mut bindings = Vec::new();
         let mut messages = Vec::new();
 
         while let Some(v) = iter.next() {
-            match v? {
-                XmlEvent::StartElement { ref name, ref attributes, .. }
-                    if name.namespace == ns_wsdl && name.local_name == "service" => {
-                        services.push(WsdlService::read(attributes, &mut iter)?);
-                },
-                XmlEvent::StartElement { ref name, ref attributes, ref namespace }
-                    if name.namespace == ns_wsdl && name.local_name == "binding" => {
-                        bindings.push(WsdlBinding::read(attributes, namespace, &mut iter)?)
-                },
-                XmlEvent::StartElement { ref name, ref attributes, .. }
-                    if name.namespace == ns_wsdl && name.local_name == "message" => {
-                        messages.push(WsdlMessage::read(attributes, &mut iter)?);
-                },
+            match (v?, depth) {
+                (XmlEvent::StartElement { ref name, .. }, 0)
+                    if name.namespace == ns_wsdl && name.local_name == "documentation" =>
+                        documentation = Some(WsdlDocumentation::read(&mut iter)?),
+                (XmlEvent::StartElement { ref name, .. }, 0)
+                    if name.namespace == ns_wsdl && name.local_name == "import" =>
+                        unimplemented!(),
+                (XmlEvent::StartElement { ref name, .. }, 0)
+                    if name.namespace == ns_wsdl && name.local_name == "types" =>
+                        types.push(WsdlTypes::read(&mut iter)?),
+                (XmlEvent::StartElement { ref name, ref attributes, .. }, 0)
+                    if name.namespace == ns_wsdl && name.local_name == "message" =>
+                        messages.push(WsdlMessage::read(attributes, &mut iter)?),
+                (XmlEvent::StartElement { ref name, ref attributes, .. }, 0)
+                    if name.namespace == ns_wsdl && name.local_name == "portType" =>
+                        port_types.push(WsdlPortType::read(attributes, &mut iter)?),
+                (XmlEvent::StartElement { ref name, ref attributes, ref namespace }, 0)
+                    if name.namespace == ns_wsdl && name.local_name == "binding" =>
+                        bindings.push(WsdlBinding::read(attributes, namespace, &mut iter)?),
+                (XmlEvent::StartElement { ref name, ref attributes, .. }, 0)
+                    if name.namespace == ns_wsdl && name.local_name == "service" =>
+                        services.push(WsdlService::read(attributes, &mut iter)?),
+                (XmlEvent::StartElement { .. }, _) => depth += 1,
+                (XmlEvent::EndElement { ref name }, 0) if name.namespace == ns_wsdl && name.local_name == "definitions" => break,
+                (XmlEvent::EndElement { .. }, _) => depth -= 1,
                 _ => continue
             }
         }
 
         Ok(Wsdl {
+            documentation,
             target_namespace,
+            types,
+            port_types,
             services,
             bindings,
             messages
@@ -197,26 +249,28 @@ impl WsdlService {
         let ns_wsdl = Some(NS_WSDL.to_string());
         let service_name = find_attribute("name", attributes);
 
+        let mut depth = 0;
         let mut ports = Vec::new();
 
         for event in iter {
-            match event? {
-                XmlEvent::StartElement { ref name, ref attributes, ref namespace }
-                    if name.local_name == "port" => {
-                        ports.push(WsdlPort::read(attributes, namespace)?);
-                },
-                XmlEvent::EndElement { ref name, .. }
-                    if name.namespace == ns_wsdl && name.local_name == "service" => {
-                        return Ok(WsdlService {
-                            name: service_name.ok_or_else(|| ErrorKind::MandatoryAttribute("name".to_string(), "wsdl:service".to_string()))?,
-                            ports
-                        });
-                },
+            match (event?, depth) {
+                (XmlEvent::StartElement { ref name, ref attributes, ref namespace }, 0)
+                    if name.namespace == ns_wsdl && name.local_name == "port" =>
+                        ports.push(WsdlPort::read(attributes, namespace)?),
+                (XmlEvent::StartElement { .. }, _) => depth += 1,
+                (XmlEvent::EndElement { ref name }, 0)
+                    if name.namespace == ns_wsdl && name.local_name == "service" =>
+                        break,
+                (XmlEvent::EndElement { .. }, _) => depth -= 1,
                 _ => continue
             }
         }
 
-        Err(ErrorKind::InvalidElement("wsdl:service".to_string()).into())
+        Ok(WsdlService {
+            documentation: None,
+            name: service_name.ok_or_else(|| ErrorKind::MandatoryAttribute("name".to_string(), "wsdl:service".to_string()))?,
+            ports
+        })
     }
 }
 
@@ -246,13 +300,14 @@ impl WsdlBinding {
 
         for event in iter {
             match event? {
-                XmlEvent::StartElement { ref name, ref attributes, ref namespace }
+                XmlEvent::StartElement { ref name, ref attributes, .. }
                     if name.namespace == ns_wsdl && name.local_name == "operation" => {
                         operations.push(WsdlOperationBinding::read(attributes)?);
                 },
                 XmlEvent::EndElement { ref name, .. }
                     if name.namespace == ns_wsdl && name.local_name == "binding" => {; 
                         return Ok(WsdlBinding {
+                            documentation: None,
                             name: binding_name.ok_or_else(|| ErrorKind::MandatoryAttribute("name".to_string(), "wsdl:binding".to_string()))?,
                             port_type,
                             operations
@@ -275,13 +330,14 @@ impl WsdlMessage {
 
         for event in iter {
             match event? {
-                XmlEvent::StartElement { ref name, ref attributes, ref namespace }
+                XmlEvent::StartElement { ref name, ref attributes, .. }
                     if name.namespace == ns_wsdl && name.local_name == "part" => {
-                        parts.push(WsdlMessagePart::read(attributes, namespace)?);
+                        parts.push(WsdlMessagePart::read(attributes)?);
                 },
                 XmlEvent::EndElement { ref name, .. }
                     if name.namespace == ns_wsdl && name.local_name == "message" => {
                         return Ok(WsdlMessage {
+                            documentation: None,
                             name: message_name.ok_or_else(|| ErrorKind::MandatoryAttribute("name".to_string(), "wsdl:message".to_string()))?,
                             parts
                         });
@@ -316,6 +372,7 @@ impl WsdlPort {
         }
 
         Ok(WsdlPort {
+            documentation: None,
             name: name.ok_or_else(|| ErrorKind::MandatoryAttribute("name".to_string(), "wsdl:port".to_string()))?,
             binding
         })
@@ -327,6 +384,7 @@ impl WsdlOperationBinding {
         let name = find_attribute("name", attributes);
 
         Ok(WsdlOperationBinding {
+            documentation: None,
             name: name.ok_or_else(|| ErrorKind::MandatoryAttribute("name".to_string(), "wsdl:operation".to_string()))?,
             input: None,
             output: None,
@@ -336,7 +394,7 @@ impl WsdlOperationBinding {
 }
 
 impl WsdlMessagePart {
-    fn read(attributes: &[OwnedAttribute], namespace: &Namespace) -> Result<WsdlMessagePart> {
+    fn read(attributes: &[OwnedAttribute]) -> Result<WsdlMessagePart> {
         let part_name = find_attribute("name", attributes);
 
         Ok(WsdlMessagePart {
@@ -344,6 +402,72 @@ impl WsdlMessagePart {
             element: None,
             part_type: None
         })
+    }
+}
+
+impl WsdlTypes {
+    fn read(iter: &mut Events<&[u8]>) -> Result<WsdlTypes> {
+        let ns_wsdl = Some(NS_WSDL.to_string());
+
+        let mut depth = 0;
+
+        for event in iter {
+            match (event?, depth) {
+                (XmlEvent::StartElement { .. }, _) => depth += 1,
+                (XmlEvent::EndElement { ref name, .. }, 0) if name.namespace == ns_wsdl && name.local_name == "types" => {
+                    break;
+                },
+                (XmlEvent::EndElement { .. }, _) => depth -= 1,
+                _ => continue
+            }
+        }
+
+        Ok(WsdlTypes { documentation: None })
+    }
+}
+
+impl WsdlPortType {
+    fn read(attributes: &[OwnedAttribute], iter: &mut Events<&[u8]>) -> Result<WsdlPortType> {
+        let name = find_attribute("name", attributes)
+            .ok_or_else(|| ErrorKind::MandatoryAttribute("name".to_string(), "wsdl:portType".to_string()))?;
+
+        let ns_wsdl = Some(NS_WSDL.to_string());
+
+        let mut depth = 0;
+
+        for event in iter {
+            match (event?, depth) {
+                (XmlEvent::StartElement { .. }, _) => depth += 1,
+                (XmlEvent::EndElement { ref name, .. }, 0) if name.namespace == ns_wsdl && name.local_name == "portType" => {
+                    break;
+                },
+                (XmlEvent::EndElement { .. }, _) => depth -= 1,
+                _ => continue
+            }
+        }
+
+        Ok(WsdlPortType { name, documentation: None })
+    }
+}
+
+impl WsdlDocumentation {
+    fn read(iter: &mut Events<&[u8]>) -> Result<WsdlDocumentation> {
+        let ns_wsdl = Some(NS_WSDL.to_string());
+
+        let mut depth = 0;
+
+        for event in iter {
+            match (event?, depth) {
+                (XmlEvent::StartElement { .. }, _) => depth += 1,
+                (XmlEvent::EndElement { ref name, .. }, 0) if name.namespace == ns_wsdl && name.local_name == "documentation" => {
+                    break;
+                },
+                (XmlEvent::EndElement { .. }, _) => depth -= 1,
+                _ => continue
+            }
+        }
+
+        Ok(WsdlDocumentation {})
     }
 }
 
