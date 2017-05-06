@@ -3,6 +3,10 @@ wsdl-rs
 
 WSDL parsing library for Rust programming language.
 
+Build Status
+------------
+
+[![Build Status](https://img.shields.io/travis/jaxx/wsdl-rs/master.svg)](https://travis-ci.org/jaxx/wsdl-rs/)
 
 Building
 ------------------
