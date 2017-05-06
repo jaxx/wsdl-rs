@@ -4,5 +4,5 @@ rust:
   - nightly
 
 script:
-  - cargo build --all --verbose
-  - cargo test --all --verbose
+  - cargo build --all --verbose --features "clippy"
+  - cargo test --all --verbose --features "clippy"
