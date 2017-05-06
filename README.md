@@ -6,7 +6,8 @@ WSDL parsing library for Rust programming language.
 Build Status
 ------------
 
-[![Build Status](https://img.shields.io/travis/jaxx/wsdl-rs/master.svg)](https://travis-ci.org/jaxx/wsdl-rs/)
+[![Linux build status](https://img.shields.io/travis/jaxx/wsdl-rs/master.svg?label=Linux%20build)](https://travis-ci.org/jaxx/wsdl-rs/)
+[![Windows build status](https://img.shields.io/appveyor/ci/jaxx/wsdl-rs/master.svg?label=Windows%20build)](https://ci.appveyor.com/project/jaxx/wsdl-rs)
 
 Building
 ------------------
