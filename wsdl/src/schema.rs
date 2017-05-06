@@ -130,13 +130,31 @@ impl Wsdl {
     pub fn load_from_url(url: &str) -> Result<Wsdl> {
         let contents = http::get(url)?;
         let decoded_contents = decode_contents(&contents)?;
-        parse_wsdl(&decoded_contents[..])
+        Wsdl::parse(&decoded_contents[..])
     }
 
     pub fn load_from_file(location: &str) -> Result<Wsdl> {
         let contents = file::load(location)?;
         let decoded_contents = decode_contents(&contents)?;
-        parse_wsdl(&decoded_contents[..])
+        Wsdl::parse(&decoded_contents[..])
+    }
+
+    pub fn parse(decoded_contents: &[u8]) -> Result<Wsdl> {
+        let ns_wsdl = Some(NS_WSDL.to_string());
+        let parser = EventReader::new(decoded_contents);
+        let mut iter = parser.into_iter();
+
+        while let Some(v) = iter.next() {
+            match v? {
+                XmlEvent::StartElement { ref name, ref attributes, .. }
+                    if name.namespace == ns_wsdl && name.local_name == "definitions" => {
+                        return Wsdl::read(attributes, &mut iter);
+                },
+                _ => continue
+            }
+        }
+
+        Err(ErrorKind::MissingElement("definitions".to_string()).into())
     }
 
     fn read(attributes: &[OwnedAttribute], mut iter: &mut Events<&[u8]>) -> Result<Wsdl> {
@@ -334,27 +352,19 @@ fn decode_contents(bytes: &[u8]) -> Result<Vec<u8>> {
     Ok(decoded_contents?.as_bytes().to_vec())
 }
 
-fn parse_wsdl(decoded_contents: &[u8]) -> Result<Wsdl> {
-    let ns_wsdl = Some(NS_WSDL.to_string());
-    let parser = EventReader::new(decoded_contents);
-    let mut iter = parser.into_iter();
-
-    while let Some(v) = iter.next() {
-        match v? {
-            XmlEvent::StartElement { ref name, ref attributes, .. }
-                if name.namespace == ns_wsdl && name.local_name == "definitions" => {
-                    return Wsdl::read(attributes, &mut iter);
-            },
-            _ => continue
-        }
-    }
-
-    Err(ErrorKind::MissingElement("definitions".to_string()).into())
-}
-
 fn find_attribute(name: &str, attributes: &[OwnedAttribute]) -> Option<String> {
     attributes
         .iter()
         .find(|a| a.name.namespace.is_none() && a.name.local_name == name)
         .map(|a| a.value.clone())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_from_string() {
+        assert!(Wsdl::parse("<?xml version='1.0' encoding='utf-8'?><definitions />".as_bytes()).is_ok())
+    }
 }
