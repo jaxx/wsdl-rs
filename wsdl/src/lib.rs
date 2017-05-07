@@ -10,19 +10,9 @@ extern crate xsd;
 extern crate error_chain;
 
 mod errors;
-mod file;
-mod http;
+pub mod file;
+pub mod http;
 mod schema;
+pub mod reader;
 
-pub use schema::{
-    Documented,
-    NamedItem,
-    Wsdl,
-    WsdlBinding,
-    WsdlOperationBinding,
-    WsdlInputBinding,
-    WsdlOutputBinding,
-    WsdlFaultBinding,
-    WsdlPort,
-    WsdlService
-};
+pub use self::reader::WsdlEvent;

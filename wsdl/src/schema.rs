@@ -1,7 +1,11 @@
+
+/*
 use errors::*;
 
 use http;
 use file;
+
+use std::io::Read;
 
 use xml::attribute::OwnedAttribute;
 use xml::name::OwnedName;
@@ -13,6 +17,29 @@ use encoding::DecoderTrap;
 use encoding::types::decode;
 
 const NS_WSDL: &'static str = "http://schemas.xmlsoap.org/wsdl/";
+
+pub enum WsdlEvent {
+    StartDefinition {
+        name: String,
+        target_namespace: String
+    },
+    EndDefinition
+}
+
+pub struct WsdlEventReader<R: Read> {
+    xml: EventReader<R>
+}
+
+impl<R: Read> WsdlEventReader<R> {
+    fn new(source: R) -> WsdlEventReader<R> {
+        WsdlEventReader {
+            xml: EventReader::new(source)
+        }
+    }
+}
+
+
+/* ======================================== */
 
 pub trait Documented {
     fn get_documentation(&self) -> &Option<WsdlDocumentation>;
@@ -158,6 +185,16 @@ impl_named_item!(WsdlPortType);
 pub struct WsdlDocumentation {
 
 }
+
+#[derive(Debug)]
+pub struct WsdlImport {
+    pub documentation: Option<WsdlDocumentation>,
+    pub location: String,
+    pub namespace: String,
+    pub extensible_attributes: Vec<OwnedAttribute>
+}
+
+impl_documented!(WsdlImport);
 
 impl Wsdl {
     pub fn load_from_url(url: &str) -> Result<Wsdl> {
@@ -509,3 +546,4 @@ mod tests {
         assert_eq!("root2", wsdl.services[1].name);
     }
 }
+*/
