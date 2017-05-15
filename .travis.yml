@@ -1,0 +1,8 @@
+language: rust
+
+rust:
+  - nightly
+
+script:
+  - cargo build --all --verbose --features "clippy"
+  - cargo test --all --verbose --features "clippy"
