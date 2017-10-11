@@ -6,6 +6,7 @@ authors = ["Jakko Sikkar <jakko.sikkar@gmail.com>",
 
 [[bin]]
 name = "xroad-gen"
+path = "src/main.rs"
 
 [dependencies]
 clippy = {version = "*", optional = true}

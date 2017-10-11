@@ -5,6 +5,8 @@ extern crate hyper;
 extern crate xml;
 extern crate encoding;
 extern crate xsd;
+extern crate tokio_core;
+extern crate futures;
 
 #[macro_use]
 extern crate error_chain;

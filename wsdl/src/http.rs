@@ -1,16 +1,23 @@
-use std::io::Read;
-use hyper::Client;
+use futures::{Future, Stream};
+use futures::future;
+use hyper::{Client, Error};
 use errors::*;
+use tokio_core::reactor::Core;
 
 pub fn get(url: &str) -> Result<Vec<u8>> {
-    let client = Client::new();
-    let mut bytes = Vec::new();
+    let mut core = Core::new()?;
+    let client = Client::new(&core.handle());
+    let uri = url.parse()?;
 
-    client.get(url)
-          .send()?
-          .read_to_end(&mut bytes)?;
+    let work = client.get(uri)
+          .and_then(|res| {
+              res.body().fold(Vec::new(), |mut v: Vec<u8>, chunk| {
+                  v.extend(&chunk[..]);
+                  future::ok::<_, Error>(v)
+              })
+          });
 
-    Ok(bytes)
+    Ok(core.run(work)?)
 }
 
 #[cfg(test)]

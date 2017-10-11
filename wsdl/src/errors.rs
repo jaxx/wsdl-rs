@@ -1,6 +1,7 @@
 use std::io::Error as IoError;
 use std::borrow::Cow;
 
+use hyper::error::{UriError};
 use hyper::Error as HyperError;
 use xml::reader::Error as XmlError;
 
@@ -9,6 +10,7 @@ error_chain! {
         Io(IoError);
         Http(HyperError);
         Xml(XmlError);
+        Uri(UriError);
     }
 
     errors {

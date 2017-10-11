@@ -8,10 +8,12 @@ authors = ["Jakko Sikkar <jakko.sikkar@gmail.com>",
 name = "wsdl"
 
 [dependencies]
-hyper = "0.10.10"
-xml-rs = "0.4.1"
-encoding = "0.2.33"
-error-chain = "0.10.0"
+hyper = "*"
+xml-rs = "*"
+encoding = "*"
+error-chain = "*"
+tokio-core = "*"
+futures = "*"
 clippy = {version = "*", optional = true}
 
 [dependencies.xsd-rs]
